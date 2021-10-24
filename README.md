@@ -1,5 +1,7 @@
 # OpsAny堡垒机
 
+【部署脚本准备中，预计月底发布，一键部署脚本】
+
 opsany-bastion是OpsAny产品系列中首个开源的项目，使用Apache2.0开源协议。
 
 opsany-bastion使用Python开发，遵循Web2.0规范，使用Web socket Terminal解决方案，具备完整的权限控制体系和
