@@ -1,0 +1,185 @@
+@import '~ant-design-vue/es/style/themes/default.less';
+
+html,
+body,
+#app,
+#root {
+  height: 100%;
+}
+
+.colorWeak {
+  filter: invert(80%);
+}
+
+.ant-layout.layout-basic {
+  height: 100vh;
+  min-height: 100vh;
+}
+
+canvas {
+  display: block;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+// 数据列表 样式
+.table-alert {
+  margin-bottom: 16px;
+}
+
+// 数据列表 操作
+.table-operator {
+  margin-bottom: 18px;
+
+  button {
+    margin-right: 8px;
+  }
+}
+
+// 数据列表 搜索条件
+.table-page-search-wrapper {
+
+  .ant-form-inline {
+    .ant-form-item {
+      display: flex;
+      margin-bottom: 24px;
+      margin-right: 0;
+
+      .ant-form-item-control-wrapper {
+        flex: 1 1;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      >.ant-form-item-label {
+        line-height: 32px;
+        padding-right: 8px;
+        width: auto;
+      }
+
+      .ant-form-item-control {
+        height: 32px;
+        line-height: 32px;
+      }
+    }
+  }
+
+  .table-page-search-submitButtons {
+    display: block;
+    margin-bottom: 24px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: @screen-xs) {
+  .ant-table {
+    width: 100%;
+    overflow-x: auto;
+
+    &-thead>tr,
+    &-tbody>tr {
+
+      >th,
+      >td {
+        white-space: pre;
+
+        >span {
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+.ant-pagination-item-active {
+  background-color: @primary-color;
+
+  &:focus a {
+    color: #fff;
+  }
+
+  &:hover a {
+    color: #fff;
+  }
+
+  a {
+    color: #fff;
+  }
+}
+
+.ant-btn-link:not([disabled]):hover span {
+  text-decoration: underline;
+}
+
+.ant-layout-sider {
+  min-width: 200px !important;
+  max-width: 200px !important;
+  flex: 0 0 200px !important;
+  width: 200px !important;
+}
+
+.ant-layout-sider-collapsed {
+  min-width: 80px !important;
+  max-width: 80px !important;
+  flex: 0 0 80px !important;
+  width: 80px !important;
+}
+
+.ant-layout .sidemenu {
+  padding-left: 200px !important;
+
+  .ant-pro-fixed-header {
+    width: calc(100% - 200px) !important;
+  }
+}
+
+.ant-layout-sider-collapsed+.ant-layout {
+  padding-left: 80px !important;
+
+  .ant-pro-fixed-header {
+    width: calc(100% - 80px) !important;
+  }
+}
+
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td {
+  padding: 10px;
+}
+
+
+.terminal,
+.xterm {
+  .xterm-viewport {
+    &::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      -webkit-box-shadow: inset 0 0 5px #474747;
+      box-shadow: inset 0 0 5px #474747;
+      background: rgba(74, 69, 69, 0.8);
+
+      &:hover {
+        background: #4a4545;
+      }
+    }
+
+    &::-webkit-scrollbar-track {
+      -webkit-box-shadow: inset 0 0 5px #474747;
+      box-shadow: inset 0 0 5px #474747;
+      border-radius: 0;
+    }
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      background: #1f1b1b;
+      transition: width .1s;
+    }
+  }
+}

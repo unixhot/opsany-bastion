@@ -1,0 +1,67 @@
+app_code: bastion
+app_name: 堡垒机
+secret_key: a0483726-f73e-11eb-bafb-00163e105ceb
+author: OpsAny
+category: OpsAny
+!!python/unicode 'date': '2021-01-06 19:56:50'
+desktop:
+  height: 720
+  is_max: true
+  width: 1300
+introduction: OpsAny堡垒机
+is_use_celery: False
+!!python/unicode 'language': python
+libraries:
+- name: Django
+  version: 2.2.6
+- name: mysqlclient
+  version: 1.4.4
+- name: MarkupSafe
+  version: 1.1
+- name: Mako
+  version: 1.0.6
+- name: pycrypto
+  version: 2.6.1
+- name: bcrypt
+  version: 3.2.0
+- name: cryptography
+  version: 3.3.1
+- name: requests
+  version: 2.25.0
+- name: urllib3
+  version: 1.26.2
+- name: redis
+  version: 2.10.6
+- name: celery
+  version: 3.1.25
+- name: django-celery
+  version: 3.2.1
+- name: python-json-logger
+  version: 0.1.7
+- name: whitenoise
+  version: 3.3.0
+- name: six
+  version: 1.11.0
+- name: uwsgi
+  version: 2.0.19.1
+- name: httplib2
+  version: 0.9.1
+- name: django-cors-headers
+  version: 3.2.1
+- name: paramiko
+  version: 2.7.2
+- name: channels
+  version: 2.1.4
+- name: channels-redis
+  version: 2.3.1
+- name: daphne
+  version: 2.2.1
+- name: django_redis
+  version: 4.11.0
+- name: gunicorn
+  version: 19.9.0
+- name: bk-iam
+  version: 1.1.20
+- name: gevent
+  version: 21.1.2
+version: 1.2.1
