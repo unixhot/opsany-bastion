@@ -7,7 +7,7 @@ from django.urls import path
 from bastion.audit import audit_views
 from bastion.utils import base_views
 from bastion.credential import credential_views
-from bastion.resource import resource_views
+from bastion.resource import resource_views, batch_views, network_proxy_views
 from bastion.strategy import views as strategy_views
 from bastion.strategy import views_v2 as strategy_views_v2
 from bastion.core import views as core_views
@@ -32,6 +32,14 @@ urlpatterns = [
     path("credential/", credential_views.CredentialView.as_view()),                         # 密码凭据，SSH凭据
     path("host-group/", resource_views.HostGroupView.as_view()),                            # 主机分组
     path("host-group-console/", resource_views.HostGroupConsoleView.as_view()),             # 主机分组
+
+    # resource_type or group_type：host database
+    path("resource/<str:resource_type>/", resource_views.HostView.as_view()),  # 资源（主机，数据库）
+    path("group/<str:group_type>/", resource_views.HostGroupView.as_view()),  # 资源分组（主机，数据库）
+    path("auth/<str:resource_type>/", resource_views.AuthResourceView.as_view()),  # 资源（主机,数据库。经过授权校验的主机）
+    path("network-proxy/", network_proxy_views.NetworkProxyView.as_view()),  # 网络代理
+    path("network-proxy-resource/", network_proxy_views.NetworkProxyResourceView.as_view()),
+
     path("host/", resource_views.HostView.as_view()),                                       # 主机
     path("auth-host/", resource_views.AuthHostView.as_view()),                              # 主机
 
@@ -67,5 +75,8 @@ urlpatterns = [
     # ESB
     path("get-info-for-workbench/", views.GetInfoForWorkbenchView.as_view()),
     # 鉴权
-    path("authentication/", views.AuthenticationView.as_view())
+    path("authentication/", views.AuthenticationView.as_view()),
+
+    # 批量下载
+    path("check-import/", batch_views.BatchView.as_view()),
 ]

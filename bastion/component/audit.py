@@ -97,18 +97,18 @@ class SessionLog:
 
     def get_log_detail(self, **kwargs):
         log_name = kwargs.get("log_name", "")
-        log_type = kwargs.get("type")
-        status, message = self._get_log_detail(log_type, log_name)
+        type = kwargs.get("type")
+        status, message = self._get_log_detail(type, log_name)
         if not status:
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         if status == 1:
             return JsonResponse(message)
         return HttpResponse(message)
 
-    def _get_log_detail(self, log_type, log_name):
-        if log_type == "guacamole":
+    def _get_log_detail(self, type, log_name):
+        if type == "guacamole":
             file_path = os.path.join(settings.ORI_GUACD_PATH, "logfile")
-        elif log_type == "terminal":
+        elif type == "terminal":
             log_name += ".log"
             file_path = settings.TERMINAL_PATH
         else:
@@ -117,9 +117,10 @@ class SessionLog:
         if not os.path.exists(full_path):
             return False, '会话信息不存在'
         else:
+            print("full_path", full_path)
             with open(full_path, 'r') as f:
                 file_data = f.read()
-            if log_type == "terminal":
+            if type == "terminal":
                 return 1, json.loads(file_data)
             return 2, file_data
 

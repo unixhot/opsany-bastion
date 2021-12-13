@@ -135,11 +135,15 @@ class CredentialGroup:
         id, id_list = data.get("id", None), data.get("id_list", None)
         if id:
             id_list = [id]
+        # id_list = data if isinstance(data, list) else [data]
         for credential in id_list:
             credential_group_query = CredentialGroupModel.fetch_one(id=credential)
             if not credential_group_query:
                 if id:
                     return False, "凭据分组不存在"
+            # credential_query = CredentialGroupRelationshipModel.fetch_one(credential_group=credential_group_query)
+            # if credential_query:
+            #     if id:  return False, "分组下有关联凭据无法删除"
             credential_group_query.delete()
         return True, ""
 
@@ -149,6 +153,10 @@ class Credential:
 
     def get_credential(self, request):
         kwargs = request.GET.dict()
+        # 全部数据
+        # credential_type = kwargs.get("credential_type")
+        # if not credential_type and not kwargs.get("id"):
+        #     return JsonResponse(error(ErrorStatusCode.MUST_INPUT_MESSAGE))
         status, message = self._get_credential(kwargs, request)
         if not status:
             app_logging.info('get_credential, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
@@ -313,7 +321,7 @@ class Credential:
         }
         """
         id = data.get("id")
-        host_list = data.get("host_list")
+        host_list = data.get("host_list", [])
         form = CredentialModelForm(data)
         if not form.is_valid():
             return False, first_error_message(form)
@@ -326,6 +334,8 @@ class Credential:
         if host_list:
             from bastion.component.resource import HostCredential
             HostCredential()._create_host_credential({"credential": credential_query.id, "host_list": host_list})
+        else:
+            HostCredentialRelationshipModel.objects.filter(credential=credential_query, credential_group=None).delete()
         return True, credential_query.to_dict()
 
     def delete_credential(self, request):
@@ -434,8 +444,7 @@ class CommandGroup:
         kwargs = request.GET.dict()
         status, message = self._get_command_group(kwargs)
         if not status:
-            app_logging.info(
-                'get_command_group, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
+            app_logging.info('get_command_group, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, message))
 
@@ -443,8 +452,7 @@ class CommandGroup:
         data = json.loads(request.body)
         status, message = self._create_command_group(request, data)
         if not status:
-            app_logging.info(
-                'create_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
+            app_logging.info('create_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         OperationLog.request_log(request, "新建", "命令分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_CREATE_SUCCESS, message))
@@ -453,8 +461,7 @@ class CommandGroup:
         data = json.loads(request.body)
         status, message = self._update_command_group(request, data)
         if not status:
-            app_logging.info(
-                'update_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
+            app_logging.info('update_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         OperationLog.request_log(request, "修改", "命令分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_UPDATE_SUCCESS, message))
@@ -463,8 +470,7 @@ class CommandGroup:
         data = json.loads(request.body)
         status, message = self._delete_command_group(data)
         if not status:
-            app_logging.info(
-                'delete_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
+            app_logging.info('delete_command_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         OperationLog.request_log(request, "删除", "命令分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_DELETE_SUCCESS))
@@ -689,5 +695,5 @@ class GroupCommand:
 
 class SyncUserGroup:
     def sync_user_group(self, request):
-        sync_user_and_group(request)
+        res = sync_user_and_group(request)
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS))

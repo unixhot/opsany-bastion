@@ -34,10 +34,10 @@ class GetModelData:
             "total", None)
         if search_type and search_data:
             kwargs[search_type + "__contains"] = search_data
-        model_queryset = self.model.fetch_all(**kwargs)
+        credential_group_queryset = self.model.fetch_all(**kwargs)
         end_data = []
-        if model_queryset:
-            for i in model_queryset:
+        if credential_group_queryset:
+            for i in credential_group_queryset:
                 end_data.append(i.to_dict())
         return True, end_data
 

@@ -39,6 +39,7 @@ class UserInfo(BaseModel):
         }
 
     def get_user_strategy_access_queryset(self):
+        # strategy_access_user_group_queryset = StrategyAccessUserGroupRelationshipModel.fetch_all(status=True)
         strategy_access_user_group_queryset = list(self.user_strategy_access.get_queryset())
         for group_user in self.user_group.get_queryset():
             strategy_access_user_group_queryset.extend(group_user.user_group.user_group_strategy_access.get_queryset())
@@ -51,6 +52,65 @@ class UserInfo(BaseModel):
             if check_time and strategy_access_query not in login_time_open_strategy_access_query:
                 login_time_open_strategy_access_query.append(strategy_access_query)
         return login_time_open_strategy_access_query
+
+    def get_user_strategy_access_queryset_v3(self):
+        strategy_access_user_group_queryset = list(self.user_strategy_access.get_queryset())
+        for group_user in self.user_group.get_queryset():
+            strategy_access_user_group_queryset.extend(group_user.user_group.user_group_strategy_access.get_queryset())
+        strategy_access_queryset = list(
+            set([strategy_user.strategy_access for strategy_user in strategy_access_user_group_queryset]))
+        # 状态开启，有效期内，登录时段外（登录变灰）
+        login_time_open_strategy_access_query = list()
+        # 状态开启，有效期内，登录时段内（正常）
+        time_frame_open_strategy_access_query = list()
+        for strategy_access_query in strategy_access_queryset:
+            check_time = self.check_strategy_valid_v3(strategy_access_query)
+            print("check_time", check_time)
+            if check_time and strategy_access_query not in login_time_open_strategy_access_query:
+                login_time_open_strategy_access_query.append(strategy_access_query)
+        return login_time_open_strategy_access_query
+
+    def check_strategy_valid_v3(self, strategy_query):
+        # 0 关闭，不在有效期 1. 在有效期内，不在登录时段内 2 在登录时段内
+        now_datetime = datetime.datetime.now()
+        week_day = datetime.datetime.now().isoweekday()
+        hour = datetime.datetime.now().hour
+        if strategy_query.status:
+            check_time = 1
+        else:
+            return 0
+        start_time = strategy_query.start_time
+        end_time = strategy_query.end_time
+        if start_time and not end_time:
+            if now_datetime > start_time:
+                check_time = 1
+            else:
+                return 0
+        if end_time and not start_time:
+            if now_datetime < end_time:
+                check_time = 1
+            else:
+                return 0
+        if end_time and start_time:
+            if start_time < now_datetime < end_time:
+                check_time = 1
+            else:
+                return 0
+        if not start_time and not end_time:
+            check_time = 1
+        if strategy_query.login_time_limit:
+            try:
+                in_login_time_limit = list()
+                for _login_time_limit in eval(strategy_query.login_time_limit):
+                    if _login_time_limit.get("week") == week_day:
+                        if hour in _login_time_limit.get("time"):
+                            in_login_time_limit.append((week_day, hour))
+                            break
+                if in_login_time_limit:
+                    check_time = 2
+            except Exception as e:
+                return 0
+        return check_time
 
     def check_strategy_valid(self, strategy_query):
         now_datetime = datetime.datetime.now()
@@ -111,6 +171,21 @@ class UserInfo(BaseModel):
             HostCredentialRelationshipModel.fetch_all(credential_group__in=credential_group_queryset))
         return list(set(host_credential_queryset))
 
+    def get_host_credential_queryset_v3(self):
+        strategy_access_queryset = self.get_user_strategy_access_queryset_v3()
+        strategy_access_credential_host_queryset = StrategyAccessCredentialHostModel.fetch_all(
+            strategy_access__in=strategy_access_queryset)
+        host_credential_queryset = [strategy_access_credential_host_query.credential_host for
+                                    strategy_access_credential_host_query in strategy_access_credential_host_queryset if
+                                    strategy_access_credential_host_query.credential_host]
+        credential_group_queryset = [strategy_access_credential_host_query.credential_group for
+                                     strategy_access_credential_host_query in strategy_access_credential_host_queryset
+                                     if
+                                     strategy_access_credential_host_query.credential_group]
+        host_credential_queryset.extend(
+            HostCredentialRelationshipModel.fetch_all(credential_group__in=credential_group_queryset))
+        return list(set(host_credential_queryset))
+
     def get_user_credential_queryset(self):
         # 通过用户查询授权的凭据
         # 1. 获取访问策略
@@ -150,6 +225,13 @@ class UserInfo(BaseModel):
 
     def get_user_host_queryset_v2(self):
         host_credential_queryset = self.get_host_credential_queryset()
+        host_queryset = [host_credential_query.host for host_credential_query in host_credential_queryset]
+        return list(set(host_queryset))
+
+    def get_user_host_queryset_v3(self):
+        # 当有关联策略且状态为开启，时显示列表，否则不显示
+        # 当登录时段被限制时登录按钮变灰，否则正常
+        host_credential_queryset = self.get_host_credential_queryset_v3()
         host_queryset = [host_credential_query.host for host_credential_query in host_credential_queryset]
         return list(set(host_queryset))
 
@@ -923,6 +1005,7 @@ class CredentialModel(BaseModel):
         return credential_group
 
     def get_host_list(self):
+        # credential_queryset = self.credential_host.get_queryset()
         credential_queryset = HostCredentialRelationshipModel.fetch_all(credential=self, credential_group__isnull=True)
         host_list = [credential_host.host.to_base_dict() for credential_host in credential_queryset]
         return host_list
@@ -1001,11 +1084,16 @@ class CredentialGroupStrategyCommandRelationshipModel(BaseModel):
 
 # 主机分组
 class HostGroupModel(BaseModel):
+    RESOURCE_HOST = "host"
+    RESOURCE_DATABASE = "database"
+    RESOURCE_TYPE = [(RESOURCE_HOST, "主机资源"), (RESOURCE_DATABASE, "数据库")]
     name = models.CharField(max_length=100, verbose_name="主机分组名称")
     description = models.CharField(max_length=500, null=True, blank=True, verbose_name="描述")
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="children_group",
                                verbose_name="上级")
     user = models.ForeignKey(UserInfo, on_delete=models.SET_NULL, null=True, verbose_name="创建人")
+    # host databases
+    group_type = models.CharField(max_length=20, choices=RESOURCE_TYPE, default=RESOURCE_HOST, verbose_name="主机分组类型")
 
     class Meta:
         db_table = "host_group"
@@ -1024,17 +1112,18 @@ class HostGroupModel(BaseModel):
             "id": self.id,
             "name": self.name,
             "description": self.description,
+            "group_type": self.group_type,
             "create_time": str(self.create_time).rsplit(".")[0]
         }
         if self.get_host_list():
             dic["host"] = self.get_host_list()
         return dic
 
-    def to_parent_dict(self):
+    def to_parent_dict(self, user_query=None):
         children = []
         children_query_set = HostGroupModel.fetch_all(parent=self).order_by("create_time")
         for i in children_query_set:
-            children.append(i.to_parent_dict())
+            children.append(i.to_parent_dict(user_query))
         dic = {
             "id": self.id,
             "name": self.name,
@@ -1045,7 +1134,25 @@ class HostGroupModel(BaseModel):
             dic["host"] = True
         else:
             dic["host"] = False
+        if user_query:
+            dic["count"] = self.get_group_resource_count(user_query)
+        else:
+            dic["count"] = 0
         return dic
+
+    def get_group_resource_count(self, user_query):
+        resource_count = 0
+        if user_query.role == 1:
+            kwargs = {"resource_type": self.group_type}
+            kwargs["group__in"] = self.get_children_group_queryset() + [self]
+            resource_count = HostModel.fetch_all(**kwargs).count()
+        else:
+            resource_queryset = user_query.get_user_host_queryset_v3()
+            for resource_query in resource_queryset:
+                if resource_query.group == self:
+                    if resource_query.resource_type == self.group_type:
+                        resource_count += 1
+        return resource_count
 
     def to_parent_host_dict(self, **kwargs):
         children = []
@@ -1107,6 +1214,7 @@ class HostGroupModel(BaseModel):
         dt = {
             "id": self.id,
             "name": self.name,
+            "group_type": self.group_type,
             "key": "group_" + str(self.id),
             "type": "group",
         }
@@ -1137,8 +1245,55 @@ class HostGroupModel(BaseModel):
         return dt
 
 
+class NetworkProxyModel(BaseModel):
+    name = models.CharField(max_length=255, verbose_name="网路代理名称")
+    linux_ip = models.CharField(max_length=150, null=True, blank=True, verbose_name="Linux IP地址")
+    linux_port = models.IntegerField(default=22, null=True, blank=True, verbose_name="Linux端口")
+    linux_login_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="Linux登录名")
+    linux_login_password = models.CharField(max_length=500, null=True, blank=True, verbose_name="Linux密码")
+    windows_ip = models.CharField(max_length=150, null=True, blank=True, verbose_name="Windows IP地址")
+    windows_port = models.IntegerField(default=22, null=True, blank=True, verbose_name="Windows端口")
+    description = models.CharField(max_length=2000, null=True, blank=True, verbose_name="网路代理描述")
+    user = models.ForeignKey(UserInfo, on_delete=models.SET_NULL, null=True, verbose_name="创建人")
+
+    class Meta:
+        db_table = "network_proxy"
+        verbose_name = "网络代理"
+        verbose_name_plural = verbose_name
+
+    def to_base_dict(self):
+        dic = {
+            "id": self.id,
+            "name": self.name
+        }
+        return dic
+
+    def to_dict(self):
+        dic = {
+            "id": self.id,
+            "name": self.name,
+            "linux_ip": self.linux_ip,
+            "linux_port": self.linux_port,
+            "linux_login_name": self.linux_login_name,
+            "linux_login_password": self.linux_login_password,
+            "windows_ip": self.windows_ip,
+            "windows_port": self.windows_port,
+            "user": self.user.to_base_dict(),
+            "description": self.description,
+        }
+        if HostModel.fetch_all(network_proxy=self):
+            dic["resource"] = True
+        else:
+            dic["resource"] = False
+        return dic
+
+
 # 主机资源
 class HostModel(BaseModel):
+    # DATABASES_MYSQL = "MySQL"
+    # DATABASES_MongoDB = "MongoDB"
+    # DATABASES_Redis = "Redis"
+    # DATABASES_TYPE = [(DATABASES_MYSQL, "MYSQL"), (DATABASES_MongoDB, "MongoDB"), (DATABASES_Redis, "Redis")]
     SYSTEM_LINUX = "Linux"
     SYSTEM_WINDOWS = "Windows"
     PROTOCOL_SSH = "SSH"
@@ -1147,8 +1302,14 @@ class HostModel(BaseModel):
     PROTOCOL_VNC = "VNC"
     SYSTEM_TYPE = [(SYSTEM_LINUX, 'Linux'), (SYSTEM_WINDOWS, 'Windows')]
     PROTOCOL_TYPE = [(PROTOCOL_SSH, 'SSH'), (PROTOCOL_RDP, 'RDP'), (PROTOCOL_TELNET, 'Telnet'), (PROTOCOL_VNC, 'VNC')]
+    RESOURCE_HOST = "host"
+    RESOURCE_DATABASE = "database"
+    RESOURCE_TYPE = [(RESOURCE_HOST, "主机资源"), (RESOURCE_DATABASE, "数据库")]
+
     host_name_code = models.CharField(max_length=200, default="", verbose_name="主机唯一标识")
     host_name = models.CharField(max_length=100, verbose_name="主机名称")
+    # mysql mongodb redis
+    database_type = models.CharField(max_length=20, null=True, blank=True, verbose_name="数据库类型")
     system_type = models.CharField(max_length=20, choices=SYSTEM_TYPE, default=SYSTEM_LINUX, verbose_name="系统类型")
     protocol_type = models.CharField(max_length=20, choices=PROTOCOL_TYPE, default=PROTOCOL_SSH, verbose_name="协议类型")
     host_address = models.CharField(max_length=150, verbose_name="主机地址")
@@ -1158,6 +1319,10 @@ class HostModel(BaseModel):
     group = models.ForeignKey(HostGroupModel, on_delete=models.CASCADE, related_name="host_group", verbose_name="所属分组")
     user = models.ForeignKey(UserInfo, on_delete=models.SET_NULL, null=True, verbose_name="创建人")
     description = models.CharField(max_length=3000, null=True, blank=True, verbose_name="主机描述")
+    # host database
+    resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPE, default=RESOURCE_HOST, verbose_name="资源类型")
+    network_proxy = models.ForeignKey(NetworkProxyModel, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name="network_proxy")
 
     class Meta:
         db_table = "host"
@@ -1169,11 +1334,17 @@ class HostModel(BaseModel):
             "id": self.id,
             "host_name": self.host_name,
             "host_name_code": self.host_name_code,
-            "system_type": self.system_type,
-            "protocol_type": self.protocol_type,
             "host_address": self.host_address,
+            "resource_type": self.resource_type,
             "create_time": str(self.create_time).rsplit(".")[0]
         }
+        if self.network_proxy:
+            dic["network_proxy"] = self.network_proxy.to_base_dict()
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
         return dic
 
     def to_dict(self):
@@ -1181,18 +1352,40 @@ class HostModel(BaseModel):
             "id": self.id,
             "host_name": self.host_name,
             "host_name_code": self.host_name_code,
-            "system_type": self.system_type,
-            "protocol_type": self.protocol_type,
             "host_address": self.host_address,
             "resource_from": self.resource_from,
             "port": self.port,
             "group": self.group.to_base_dict(),
+            "resource_type": self.resource_type,
             "description": self.description,
             "create_time": str(self.create_time).rsplit(".")[0],
             "credential": self.get_base_credential_or_credential_group()
         }
         if self.user:
             dic["user"] = self.user.to_base_dict()
+        if self.network_proxy:
+            dic["network_proxy"] = self.network_proxy.to_base_dict()
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
+        return dic
+
+    def to_network_proxy_dict(self):
+        dic = {
+            "id": self.id,
+            "host_name": self.host_name,
+            "host_name_code": self.host_name_code,
+            "host_address": self.host_address,
+            "resource_type": self.resource_type,
+            "description": self.description,
+        }
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
         return dic
 
     def to_auth_host_dict(self):
@@ -1200,13 +1393,19 @@ class HostModel(BaseModel):
             "id": self.id,
             "host_name": self.host_name,
             "host_name_code": self.host_name_code,
-            "system_type": self.system_type,
-            "protocol_type": self.protocol_type,
             "host_address": self.host_address,
             "port": self.port,
+            "resource_type": self.resource_type,
             "group": self.group.to_base_dict(),
             "create_time": str(self.create_time).rsplit(".")[0],
         }
+        if self.network_proxy:
+            dic["network_proxy"] = self.network_proxy.to_base_dict()
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
         return dic
 
     def to_console_dict(self):
@@ -1215,17 +1414,23 @@ class HostModel(BaseModel):
             "name": self.host_name,
             "host_name": self.host_name,
             "host_name_code": self.host_name_code,
-            "system_type": self.system_type,
-            "protocol_type": self.protocol_type,
             "host_address": self.host_address,
             "resource_from": self.resource_from,
             "type": "host",
             "key": "host_" + str(self.id),
             "port": self.port,
             "group": self.group.to_base_dict(),
+            "resource_type": self.resource_type,
             "description": self.description,
             "create_time": str(self.create_time).rsplit(".")[0],
         }
+        if self.network_proxy:
+            dic["network_proxy"] = self.network_proxy.to_base_dict()
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
         return dic
 
     def get_all_dict(self):
@@ -1233,16 +1438,24 @@ class HostModel(BaseModel):
             "id": self.id,
             "host_name": self.host_name,
             "host_name_code": self.host_name_code,
-            "system_type": self.system_type,
-            "protocol_type": self.protocol_type,
+            # "system_type": self.system_type,
+            # "protocol_type": self.protocol_type,
             "host_address": self.host_address,
             "resource_from": self.resource_from,
             "port": self.port,
             "group": self.group.to_base_dict(),
+            "resource_type": self.resource_type,
             "description": self.description,
             "create_time": str(self.create_time).rsplit(".")[0],
             "credential": self.get_base_credential_or_credential_group()
         }
+        if self.network_proxy:
+            dic["network_proxy"] = self.network_proxy.to_base_dict()
+        if self.resource_type == self.RESOURCE_HOST:
+            dic["system_type"] = self.system_type
+            dic["protocol_type"] = self.protocol_type
+        elif self.resource_type == self.RESOURCE_DATABASE:
+            dic["database_type"] = self.database_type
         if self.user:
             dic["user"] = self.user.to_base_dict()
         return dic

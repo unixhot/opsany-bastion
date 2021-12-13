@@ -432,7 +432,7 @@ class CheckUserHostComponent:
                     if self.check_time(start_time, end_time, current_time):
                         for _login_time_limit in login_time_limit:
                             if _login_time_limit.get("week") == week_day:
-                                if hour not in _login_time_limit.get("time"):
+                                if hour in _login_time_limit.get("time"):
                                     flag = False
                                     if level:
                                         if level != 1:
@@ -754,11 +754,11 @@ class HostFileComponent(LinkCheckComponent):
         info['Name'] = os.path.basename(filepath)
         return info
 
-    def client_ssh_by_password(self, ip, port, username, password):
+    def client_ssh_by_password(self, ip, port, username, password, sock=None):
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=ip, port=port, username=username, password=password, timeout=3)
+            ssh.connect(hostname=ip, port=port, username=username, password=password, timeout=3, sock=sock)
             return True, ssh
         except Exception as e:
             app_logging.error("[ERROR] SSH web socket, client_ssh_by_password error: {}, param: {}".format(
@@ -766,7 +766,7 @@ class HostFileComponent(LinkCheckComponent):
             ))
             return False, None
 
-    def client_ssh_by_ssh_key(self, ip, port, ssh_key, passphrase):
+    def client_ssh_by_ssh_key(self, ip, port, ssh_key, passphrase, sock=None):
         """
         创建秘钥登陆SSH连接
         """
@@ -775,7 +775,7 @@ class HostFileComponent(LinkCheckComponent):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             io_pri_key = io.StringIO(ssh_key)
             pri_key = paramiko.RSAKey.from_private_key(io_pri_key, password=passphrase)
-            ssh.connect(hostname=ip, port=port, pkey=pri_key, timeout=3)
+            ssh.connect(hostname=ip, port=port, pkey=pri_key, timeout=3, sock=sock)
             return True, ssh
         except Exception as e:
             app_logging.error("[ERROR] SSH web socket, client_ssh_by_ssh_key error: {}, param: {}".format(
@@ -796,26 +796,57 @@ class HostFileComponent(LinkCheckComponent):
             password = ""
         return password
 
+    def create_proxy_sock(self, ip, port, username, password, host_ip, host_port):
+        """
+        创建代理连接
+        """
+        try:
+            proxy = paramiko.SSHClient()
+            proxy.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            proxy.connect(hostname=ip, port=port, username=username, password=self.get_password(password))
+            sock = proxy.get_transport().open_channel(
+                'direct-tcpip', (host_ip, host_port), (ip, 0)
+                        )
+            return True, sock
+        except Exception as e:
+            app_logging.error("[ERROR] SSH web socket, create_proxy_sock error: {}, param: {}".format(
+                    str(e), str(ip)
+            ))
+            return False, None
+
     def _create_ssh_link(self, credential, host, password):
         """
         创建SSH连接
         """
+        network_proxy = host.network_proxy
+        sock = None
+        if network_proxy:
+            status, sock = self.create_proxy_sock(
+                    network_proxy.linux_ip,
+                    network_proxy.linux_port,
+                    network_proxy.linux_login_name,
+                    network_proxy.linux_login_password,
+                    host.host_address,
+                    host.port
+                )
+            if not status:
+                return False, "代理服务器连接失败"
         if credential.login_type == CredentialModel.LOGIN_AUTO:
             if credential.credential_type == CredentialModel.CREDENTIAL_PASSWORD:
                 password = self.get_password(credential.login_password)
                 login_name = credential.login_name
-                status, ssh = self.client_ssh_by_password(host.host_address, host.port, login_name, password)
+                status, ssh = self.client_ssh_by_password(host.host_address, host.port, login_name, password, sock)
             else:
                 password = credential.passphrase
                 ssh_key = credential.ssh_key
-                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password)
+                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
         else:
             if credential.credential_type == CredentialModel.CREDENTIAL_PASSWORD:
                 login_name = credential.login_name
-                status, ssh = self.client_ssh_by_password(host.host_address, host.port, login_name, password)
+                status, ssh = self.client_ssh_by_password(host.host_address, host.port, login_name, password, sock)
             else:
                 ssh_key = credential.ssh_key
-                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password)
+                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
         return status, ssh
 
     def _create_cache_ssh_link(self, token_data):

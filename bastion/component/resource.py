@@ -9,8 +9,7 @@ from bastion.component.credential import Credential
 from bastion.forms import first_error_message
 from bastion.forms.forms import HostGroupModelForm, HostModelForm, HostCredentialModelForm, \
     CredentialModelForm
-from bastion.models import HostModel, HostGroupModel, HostCredentialRelationshipModel, CredentialModel, \
-    CredentialGroupModel, UserInfo, UserGroupModel, CredentialGroupRelationshipModel
+from bastion.models import HostModel, HostGroupModel, HostCredentialRelationshipModel, UserInfo, UserGroupModel, CredentialGroupRelationshipModel
 from bastion.utils.status_code import success, SuccessStatusCode, error, ErrorStatusCode
 
 app_logging = logging.getLogger("app")
@@ -18,16 +17,22 @@ app_logging = logging.getLogger("app")
 
 class HostGroup:
     _get_model_data = GetModelData(HostGroupModel)
-
-    def get_host_group(self, request):
-        kwargs = request.GET.dict()
-        id = kwargs.get("id")
-        all_data = kwargs.pop("all_data", None)
+    def get_host_group(self, request, **kwargs):
+        data = request.GET.dict()
+        user_query = GetUserInfo().get_user_info(request)
+        group_type = kwargs.get('group_type')
+        if group_type == HostGroupModel.RESOURCE_DATABASE:
+            data["group_type"] = HostGroupModel.RESOURCE_DATABASE
+        else:
+            data["group_type"] = HostGroupModel.RESOURCE_HOST
+        id = data.get("id")
+        all_data = data.pop("all_data", None)
         # 单条数据
         if id:
             return self._get_one_data(id, request)
         # 全部数据
-        return self._get_all_data(kwargs)
+        # if all_data:
+        return self._get_all_data(data, user_query)
 
     def _get_one_data(self, id, request=None):
         host_group_query = HostGroupModel.fetch_one(id=id)
@@ -36,7 +41,7 @@ class HostGroup:
         res_data = host_group_query.to_parent_host_dict()
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, res_data))
 
-    def _get_all_data(self, kwargs):
+    def _get_all_data(self, kwargs, user_query=None):
         kwargs["parent"] = None
         search_type, search_data, _ = kwargs.pop("search_type", None), kwargs.pop("search_data", None), kwargs.pop(
             "total", None)
@@ -46,37 +51,41 @@ class HostGroup:
         end_data = []
         if credential_group_queryset:
             for i in credential_group_queryset:
-                end_data.append(i.to_parent_dict())
+                end_data.append(i.to_parent_dict(user_query))
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, end_data))
 
     def get_host_group_console(self, request):
         kwargs = request.GET.dict()
-        search_data = kwargs.pop("search_data", None)
+        search_data = kwargs.pop("search_data", {})
         user_query = GetUserInfo().get_user_info(request)
         if not user_query:
             return False, "用户不存在"
         status, message = self._get_host_group_console(user_query, search_data)
         if not status:
-            app_logging.info(
-                'get_host_group_console, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
+            app_logging.info('get_host_group_console, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, message))
 
-    def _get_host_group_console(self, user_query, search_data=None):
-        all_host_group_queryset = HostGroupModel.fetch_all(parent=None)
+    def _get_host_group_console(self, user_query, search_data=None, group_type="host"):
+        all_host_group_queryset = HostGroupModel.fetch_all(parent=None, group_type=group_type).order_by("create_time")
         if user_query.role != 1:
             host_list = [host_group.to_all_dict(user_query, search_data) for host_group in all_host_group_queryset]
         else:
             host_list = [host_group.to_all_dict(search_data=search_data) for host_group in all_host_group_queryset]
         return True, host_list
 
-    def create_host_group(self, request):
+    def create_host_group(self, request, **kwargs):
         data = json.loads(request.body)
+        group_type = kwargs.get('group_type')
+        if group_type == HostGroupModel.RESOURCE_DATABASE:
+            data["group_type"] = HostGroupModel.RESOURCE_DATABASE
+        else:
+            data["group_type"] = HostGroupModel.RESOURCE_HOST
         status, message = self._create_host_group(request, data)
         if not status:
             app_logging.info('create_host_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "新建", "主机分组", "success")
+        OperationLog.request_log(request, "新建", "资源分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_CREATE_SUCCESS, message))
 
     def _create_host_group(self, request, data):
@@ -94,13 +103,20 @@ class HostGroup:
         host_group_query = HostGroupModel.create(**form.cleaned_data)
         return True, host_group_query.to_dict()
 
-    def update_host_group(self, request):
+    def update_host_group(self, request, **kwargs):
         data = json.loads(request.body)
+        group_type = kwargs.get('group_type')
+        if group_type == HostGroupModel.RESOURCE_DATABASE:
+            data["group_type"] = HostGroupModel.RESOURCE_DATABASE
+        else:
+            data["group_type"] = HostGroupModel.RESOURCE_HOST
+        if not data.get("group_type"):
+            data["group_type"] = HostGroupModel.RESOURCE_HOST
         status, message = self._update_host_group(data, request)
         if not status:
             app_logging.info('update_host_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "修改", "主机分组", "success")
+        OperationLog.request_log(request, "修改", "资源分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_UPDATE_SUCCESS, message))
 
     def _update_host_group(self, data, request):
@@ -115,27 +131,44 @@ class HostGroup:
         host_group_query = host_group_query.update(**form.cleaned_data)
         return True, host_group_query.to_dict()
 
-    def delete_host_group(self, request):
+    def delete_host_group(self, request, **kwargs):
         data = json.loads(request.body)
+        group_type = kwargs.get('group_type')
+        if group_type == HostGroupModel.RESOURCE_DATABASE:
+            data["group_type"] = HostGroupModel.RESOURCE_DATABASE
+        else:
+            data["group_type"] = HostGroupModel.RESOURCE_HOST
         status, message = self._delete_host_group(data)
         if not status:
             app_logging.info('delete_host_group, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "删除", "主机分组", "success")
+        OperationLog.request_log(request, "删除", "资源分组", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_DELETE_SUCCESS))
 
     def _delete_host_group(self, data):
         id, id_list = data.get("id", None), data.get("id_list", None)
+        group_type = data.get("group_type", None)
+        # if id:
+        #     id_list = [id]
+        # for host_group_id in id_list:
+        #     host_group_query = HostGroupModel.fetch_one(id=host_group_id)
+        #     if not host_group_query:
+        #         if id:
+        #             return False, "分组不存在"
+        #     status, message = HostGroupModelForm().check_delete(id)
+        #     if not status:
+        #         if id:
+        #             return False, message
         if not id:
             return False, "参数错误"
-        host_group_query = HostGroupModel.fetch_one(id=id)
+        host_group_query = HostGroupModel.fetch_one(id=id, group_type=group_type)
         if not host_group_query:
-            return False, "主机分组不存在"
+            return False, "资源分组不存在"
         host_query = HostModel.fetch_one(group=host_group_query)
         if host_query:
-            return False, "当前分组下有关联主机无法删除"
+            return False, "当前分组下有关联资源无法删除"
         if host_group_query.check_host_dict():
-            return False, "当前分组的子分组下有关联主机无法删除"
+            return False, "当前分组的子分组下有关联资源无法删除"
         host_group_query.delete()
         return True, ""
 
@@ -143,11 +176,16 @@ class HostGroup:
 class Host:
     _get_model_data = GetModelData(HostModel)
 
-    def get_host(self, request):
-        kwargs = request.GET.dict()
-        status, message = self._get_host(kwargs, request)
+    def get_host(self, request, **kwargs):
+        data = request.GET.dict()
+        resource_type = kwargs.get('resource_type')
+        if resource_type == HostModel.RESOURCE_DATABASE:
+            data["resource_type"] = HostModel.RESOURCE_DATABASE
+        else:
+            data["resource_type"] = HostModel.RESOURCE_HOST
+        status, message = self._get_host(data, request)
         if not status:
-            app_logging.info('get_host, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
+            app_logging.info('get_host, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, message))
 
@@ -157,6 +195,10 @@ class Host:
             return False, "用户不存在"
         id = kwargs.pop("id", None)
         all_data = kwargs.pop("all_data", None)
+        network_proxy = kwargs.pop("network_proxy", None)
+        if network_proxy:
+            kwargs["network_proxy"] = None
+            return self._get_netwok_proxy_data(kwargs, user_query)
         if id:
             return self._get_one_data(id, user_query)
         # 全部数据
@@ -170,7 +212,7 @@ class Host:
             host_queryset = user_query.get_user_host_queryset_v2()
             host_id_list = [host.id for host in host_queryset]
             if int(id) not in host_id_list:
-                return False, "无权访问该主机"
+                return False, "无权访问该资源"
         query = HostModel.fetch_one(id=id)
         if not query:
             return False, "数据不存在"
@@ -192,10 +234,10 @@ class Host:
             host_queryset = user_query.get_user_host_queryset_v2()
             host_id_list = [host.id for host in host_queryset]
             kwargs["id__in"] = host_id_list
-        credential_group_queryset = HostModel.fetch_all(**kwargs)
+        resource_queryset = HostModel.fetch_all(**kwargs)
         end_data = []
-        if credential_group_queryset:
-            for i in credential_group_queryset:
+        if resource_queryset:
+            for i in resource_queryset:
                 end_data.append(i.to_dict())
         return True, end_data
 
@@ -213,6 +255,7 @@ class Host:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
+                print("host_group_query", host_group_query.get_children_group_queryset() + [host_group_query])
                 kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
         if user_query.role != 1:
             host_queryset = user_query.get_user_host_queryset_v2()
@@ -227,6 +270,16 @@ class Host:
             "data": end_data
         }
         return True, res_data
+
+    def _get_netwok_proxy_data(self, kwargs, user_query):
+        search_type, search_data, _ = kwargs.pop("search_type", None), kwargs.pop("search_data", None), kwargs.pop(
+            "total", None)
+        if search_type and search_data:
+            kwargs[search_type + "__contains"] = search_data
+        if user_query.role == 1:
+            resource_queryset = HostModel.fetch_all(**kwargs)
+            return True, [resource_query.to_network_proxy_dict() for resource_query in resource_queryset]
+        return False, "您无权访问"
 
     def _get_host_paging_data(self, kwargs):
         search_type, search_data, _ = kwargs.pop("search_type", None), kwargs.pop("search_data", None), kwargs.pop(
@@ -247,12 +300,12 @@ class Host:
         }
         return True, res_data
 
-    def create_host(self, request):
+    def create_host(self, request, **kwargs):
         """
-        create_host
+
         :param request:
         {
-            "host_name": "测试创建主机凭据2",
+            "host_name": "测试创建资源凭据2",
             "system_type": "Linux",
             "protocol_type": "SSH",
             "host_address": "www.hu27.cn",
@@ -261,21 +314,31 @@ class Host:
             "credential_list": [1,2,3,4],
             "credential_group_list": [1,2,3,4],
             "credential": {
-                "name": "测试创建主机凭据3",
+                "name": "测试创建资源凭据3",
                 "login_type": "auto",
                 "credential_type": "password",
                 "login_name": "root",
                 "login_password": "123456"
             }
-    }
+        }
+
         :return:
         """
         data = json.loads(request.body)
+        if not data.get("resource_type"):
+            data["resource_type"] = HostModel.RESOURCE_HOST
+        resource_type = kwargs.get('resource_type')
+        if resource_type == HostModel.RESOURCE_DATABASE:
+            data["resource_type"] = HostModel.RESOURCE_DATABASE
+            data["system_type"] = HostModel.SYSTEM_LINUX
+            data["protocol_type"] = HostModel.PROTOCOL_SSH
+        else:
+            data["resource_type"] = HostModel.RESOURCE_HOST
         status, message = self._create_host(request, data)
         if not status:
             app_logging.info('create_host, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "新建", "主机", "success")
+        OperationLog.request_log(request, "新建", "资源", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_CREATE_SUCCESS, message))
 
     def _create_host(self, request, data):
@@ -324,16 +387,25 @@ class Host:
             return False, message
         return HostCredential()._create_host_credential({"host": host, "credential_list": [message.get("id")]})
 
-    def update_host(self, request):
+    def update_host(self, request, **kwargs):
         data = json.loads(request.body)
-        status, message = self._update_host(data)
+        if not data.get("resource_type"):
+            data["resource_type"] = HostModel.RESOURCE_HOST
+        resource_type = kwargs.get('resource_type')
+        if resource_type == HostModel.RESOURCE_DATABASE:
+            data["resource_type"] = HostModel.RESOURCE_DATABASE
+            data["system_type"] = HostModel.SYSTEM_LINUX
+            data["protocol_type"] = HostModel.PROTOCOL_SSH
+        else:
+            data["resource_type"] = HostModel.RESOURCE_HOST
+        status, message = self._update_host(request, data)
         if not status:
             app_logging.info('update_host, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "修改", "主机", "success")
+        OperationLog.request_log(request, "修改", "资源", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_UPDATE_SUCCESS, message))
 
-    def _update_host(self, data):
+    def _update_host(self, request, data):
         id = data.get("id")
         credential_list = data.get("credential_list", [])
         credential_group_list = data.get("credential_group_list", [])
@@ -343,7 +415,7 @@ class Host:
         form = HostModelForm(data)
         if not form.is_valid():
             return False, first_error_message(form)
-        form.cleaned_data.pop("host_name_code", None)
+        # form.cleaned_data.pop("host_name_code", None)
         host_query = host_query.update(**form.cleaned_data)
         HostCredential()._create_host_credential({
             "host": host_query.id,
@@ -351,24 +423,30 @@ class Host:
             "credential_group_list": credential_group_list})
         return True, host_query.to_dict()
 
-    def delete_host(self, request):
+    def delete_host(self, request, **kwargs):
         data = json.loads(request.body)
+        resource_type = kwargs.get('resource_type')
+        if resource_type == HostModel.RESOURCE_DATABASE:
+            data["resource_type"] = HostModel.RESOURCE_DATABASE
+        else:
+            data["resource_type"] = HostModel.RESOURCE_HOST
         status, message = self._delete_host(data)
         if not status:
             app_logging.info('delete_host, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
             return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        OperationLog.request_log(request, "删除", "主机", "success")
+        OperationLog.request_log(request, "删除", "资源", "success")
         return JsonResponse(success(SuccessStatusCode.MESSAGE_DELETE_SUCCESS))
 
     def _delete_host(self, data):
         id, id_list = data.get("id", None), data.get("id_list", None)
+        resource_type = data.get("resource_type", None)
         if id:
             id_list = [id]
         for host_id in id_list:
-            host_query = HostModel.fetch_one(id=host_id)
+            host_query = HostModel.fetch_one(id=host_id, resource_type=resource_type)
             if not host_query:
                 if id:
-                    return False, "主机不存在"
+                    return False, "资源不存在"
             host_query.delete()
         return True, ""
 
@@ -399,13 +477,25 @@ class AuthHost:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
+                print("host_group_query", host_group_query.get_children_group_queryset() + [host_group_query])
                 kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+        host_queryset_v2 = user_query.get_user_host_queryset_v2()
         if user_query.role != 1:
-            host_queryset = user_query.get_user_host_queryset_v2()
-            host_id_list = [host.id for host in host_queryset]
+            host_queryset_v3 = user_query.get_user_host_queryset_v3()
+            host_id_list = [host.id for host in host_queryset_v3]
             kwargs["id__in"] = host_id_list
         current_page, total = HostModel.pagination(current, pageSize, **kwargs)
-        end_data = [i.to_auth_host_dict() for i in current_page]
+        end_data = []
+        for host in current_page:
+            dic = host.to_auth_host_dict()
+            if user_query.role != 1:
+                if host not in host_queryset_v2:
+                    dic["time_frame"] = False
+                else:
+                    dic["time_frame"] = True
+            else:
+                dic["time_frame"] = True
+            end_data.append(dic)
         res_data = {
             "current": current,
             "pageSize": pageSize,
@@ -413,6 +503,65 @@ class AuthHost:
             "data": end_data
         }
         return True, res_data
+
+
+class AuthResource:
+    def get_auth_resource(self, request, **kwargs):
+        data = request.GET.dict()
+        resource_type = kwargs.get('resource_type')
+        if resource_type == HostModel.RESOURCE_DATABASE:
+            data["resource_type"] = HostModel.RESOURCE_DATABASE
+        else:
+            data["resource_type"] = HostModel.RESOURCE_HOST
+        user_query = GetUserInfo().get_user_info(request)
+        if not user_query:
+            return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message="用户不存在"))
+        status, message = self._get_auth_resource(data, user_query)
+        if not status:
+            app_logging.info('get_host, parameter：{}, error info: {}'.format((json.dumps(data)), str(message)))
+            return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
+        return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, message))
+
+    def _get_auth_resource(self, kwargs, user_query):
+        search_type, search_data, _ = kwargs.pop("search_type", None), kwargs.pop("search_data", None), kwargs.pop(
+            "total", None)
+        if search_type and search_data:
+            kwargs[search_type + "__contains"] = search_data
+        try:
+            current, pageSize = int(kwargs.pop("current")), int(kwargs.pop("pageSize"))
+        except Exception:
+            current, pageSize = 1, 10
+        group_id = kwargs.get("group_id")
+        if group_id:
+            host_group_query = HostGroupModel.fetch_one(id=group_id)
+            if host_group_query:
+                kwargs.pop("group_id", None)
+                kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+        host_queryset_v2 = user_query.get_user_host_queryset_v2()
+        if user_query.role != 1:
+            host_queryset_v3 = user_query.get_user_host_queryset_v3()
+            host_id_list = [host.id for host in host_queryset_v3]
+            kwargs["id__in"] = host_id_list
+        current_page, total = HostModel.pagination(current, pageSize, **kwargs)
+        end_data = []
+        for host in current_page:
+            dic = host.to_auth_host_dict()
+            if user_query.role != 1:
+                if host not in host_queryset_v2:
+                    dic["time_frame"] = False
+                else:
+                    dic["time_frame"] = True
+            else:
+                dic["time_frame"] = True
+            end_data.append(dic)
+        res_data = {
+            "current": current,
+            "pageSize": pageSize,
+            "total": total,
+            "data": end_data
+        }
+        return True, res_data
+
 
 
 class HostCredential:
@@ -435,7 +584,15 @@ class HostCredential:
         return JsonResponse(success(SuccessStatusCode.MESSAGE_CREATE_SUCCESS, message))
 
     def _create_host_credential(self, data):
-        """主机关联凭据，凭据分组，凭据关联主机，凭据分组关联主机"""
+        """
+        资源关联凭据，凭据分组，凭据关联资源，凭据分组关联资源
+        host: 1
+        host_list: [1,2,3]
+        credential: [1,2,3]
+        credential_list: [1,2,3]
+        credential_group: [query, query]
+        credential_group_list: [query, query]
+        """
         host, credential_list, credential_group_list = data.get("host"), data.get("credential_list", []), data.get(
             "credential_group_list", [])
         credential, credential_group, host_list = data.get("credential"), data.get("credential_group"), data.get(
@@ -445,13 +602,10 @@ class HostCredential:
                 self._save_host_credential({"host": host, "credential": credential_id})
             self._delete_old_data("host", host, "credential", credential_list, other={"credential_group__isnull": True})
             for credential_group_id in credential_group_list:
-                credential_group_rel_queryset = CredentialGroupRelationshipModel.fetch_all(
-                    credential_group_id=credential_group_id)
+                credential_group_rel_queryset = CredentialGroupRelationshipModel.fetch_all(credential_group_id=credential_group_id)
                 for credential_group_rel_query in credential_group_rel_queryset:
-                    self._save_host_credential({"host": host, "credential": credential_group_rel_query.credential.id,
-                                                "credential_group": credential_group_id})
-            self._delete_old_data("host", host, "credential_group", credential_group_list,
-                                  other={"credential__isnull": False})
+                    self._save_host_credential({"host": host, "credential":credential_group_rel_query.credential.id, "credential_group": credential_group_id})
+            self._delete_old_data("host", host, "credential_group", credential_group_list, other={"credential__isnull": False})
         if credential:
             for host_id in host_list:
                 self._save_host_credential({"host": host_id, "credential": credential})
@@ -460,10 +614,9 @@ class HostCredential:
             for host_id in host_list:
                 credential_group_rel_queryset = credential_group.credential_group_queryset.get_queryset()
                 for credential_group_rel_query in credential_group_rel_queryset:
-                    self._save_host_credential({"host": host_id, "credential": credential_group_rel_query.credential.id,
-                                                "credential_group": credential_group.id})
-            self._delete_old_data("credential_group", credential_group, "host", host_list,
-                                  other={"credential__isnull": False})
+                    self._save_host_credential({"host": host_id, "credential":credential_group_rel_query.credential.id, "credential_group": credential_group.id})
+            self._delete_old_data("credential_group", credential_group, "host", host_list, other={"credential__isnull": False})
+
         return True, ""
 
     def _save_host_credential(self, data):
@@ -504,8 +657,7 @@ class HostCredential:
         credential = data.get("credential")
         credential_group = data.get("credential_group")
         if host and credential:
-            HostCredentialRelationshipModel.objects.filter(host=host, credential=credential,
-                                                           credential_group__isnull=True).delete()
+            HostCredentialRelationshipModel.objects.filter(host=host, credential=credential,credential_group__isnull=True).delete()
             return True, ""
         if host and credential_group:
             HostCredentialRelationshipModel.objects.filter(host=host, credential_group=credential_group).delete()

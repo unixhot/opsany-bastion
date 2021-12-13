@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import requests
 import os
 
@@ -28,4 +29,3 @@ def add_action_to_system():
     }
     res = requests.post(URL, headers=headers, json=actions)
 
-add_action_to_system()

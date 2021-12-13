@@ -1,21 +1,21 @@
 from django.views import View
 
-from bastion.component.resource import Host, HostGroup, HostCredential, UserGroup, User, AuthHost
+from bastion.component.resource import Host, HostGroup, HostCredential, UserGroup, User, AuthHost, AuthResource
 from bastion.utils.decorator import user_sync
 
 
 class HostGroupView(View):
-    def get(self, request):
-        return HostGroup().get_host_group(request)
+    def get(self, request, **kwargs):
+        return HostGroup().get_host_group(request, **kwargs)
 
-    def post(self, request):
-        return HostGroup().create_host_group(request)
+    def post(self, request, **kwargs):
+        return HostGroup().create_host_group(request, **kwargs)
 
-    def put(self, request):
-        return HostGroup().update_host_group(request)
+    def put(self, request, **kwargs):
+        return HostGroup().update_host_group(request, **kwargs)
 
-    def delete(self, request):
-        return HostGroup().delete_host_group(request)
+    def delete(self, request, **kwargs):
+        return HostGroup().delete_host_group(request, **kwargs)
 
 
 class HostGroupConsoleView(View):
@@ -25,22 +25,26 @@ class HostGroupConsoleView(View):
 
 
 class HostView(View):
-    def get(self, request):
-        return Host().get_host(request)
+    def get(self, request, **kwargs):
+        return Host().get_host(request, **kwargs)
 
-    def post(self, request):
-        return Host().create_host(request)
+    def post(self, request, **kwargs):
+        return Host().create_host(request, **kwargs)
 
-    def put(self, request):
-        return Host().update_host(request)
+    def put(self, request, **kwargs):
+        return Host().update_host(request, **kwargs)
 
-    def delete(self, request):
-        return Host().delete_host(request)
+    def delete(self, request, **kwargs):
+        return Host().delete_host(request, **kwargs)
 
 
 class AuthHostView(View):
     def get(self, request):
         return AuthHost().get_auth_host(request)
+
+class AuthResourceView(View):
+    def get(self, request, **kwargs):
+        return AuthResource().get_auth_resource(request, **kwargs)
 
 
 class HostCredentialView(View):

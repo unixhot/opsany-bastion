@@ -33,4 +33,6 @@ channels-redis==2.3.1
 django_redis==4.11.0
 gunicorn==19.9.0
 gevent==21.1.2
+XlsxWriter==1.2.8
+xlrd==1.2.0
 bk-iam==1.1.20

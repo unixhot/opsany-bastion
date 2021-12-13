@@ -19,9 +19,9 @@ class ErrorStatusCode(Enum):
     DATA_NOT_EXISTED = (404, 40400, '数据不存在')
     CREDENTIAL_GROUP_NOT_EXISTED = (404, 40401, '凭据分组不存在')
     CREDENTIAL_NOT_EXISTED = (404, 40402, '凭据不存在')
-    HOST_GROUP_NOT_EXISTED = (404, 40403, '主机分组不存在')
+    HOST_GROUP_NOT_EXISTED = (404, 40403, '分组不存在')
     PARENT_HOST_GROUP_NOT_EXISTED = (404, 40404, '上级分组不存在')
-    HOST_NOT_EXISTED = (404, 40405, '主机资源不存在')
+    HOST_NOT_EXISTED = (404, 40405, '资源不存在')
 
     # code = 422
     CUSTOM_ERROR = (422, 42200, '')
@@ -32,11 +32,12 @@ class ErrorStatusCode(Enum):
     KWARGS_ERROR = (422, 42203, '参数错误')
     CREDENTIAL_GROUP_DELETE_ERROR = (422, 42204, '当前分组下有关联凭据无法删除')
     HOST_GROUP_DELETE_ERROR = (422, 42205, '当前分组下有关联分组无法删除')
-    HOST_GROUP_HAS_HOST_ERROR = (422, 42206, '当前分组下有关联主机无法删除')
+    HOST_GROUP_HAS_HOST_ERROR = (422, 42206, '当前分组下有关联资源无法删除')
     UNKNOWN_KWARGS_ERROR = (422, 42207, '出现未知的参数')
     DELETE_ERROR = (422, 42208, '删除失败')
     HANDLE_ERROR = (422, 42209, '操作失败')
     UPLOAD_ERROR = (422, 42210, '上传失败')
+    PARAMS_ERROR = (422, 42233, '参数不合法')
 
     SERVER_ERROR = (422, 42222, '服务器开小差了，请您稍后再试或联系开发人员')
 

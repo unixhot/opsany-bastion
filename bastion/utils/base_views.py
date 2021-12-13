@@ -120,8 +120,7 @@ class GetUserInfoCtrl(View):
             "username": bk_user.get("username"),
             "email": bk_user.get("email"),
             "ch_name": bk_user.get("ch_name"),
-            "role": bk_user.get("role"),
-            "icon_url": bk_user.get("icon_url"),
+            "role": bk_user.get("role")
         }
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, data))
 

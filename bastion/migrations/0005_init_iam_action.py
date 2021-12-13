@@ -2,20 +2,11 @@
 
 from django.db import migrations
 
-import os
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(
-    __file__)))
-path = os.path.join(os.path.join(BASE_DIR, "utils"), "init_action.py")
-path_2 = os.path.join(os.path.join(BASE_DIR, "utils"), "init_action.pyc")
+from bastion.utils.init_action import add_action_to_system
 
 
 def run_init(apps, schema_editor):
-    if os.path.isfile(path):
-        command = "python {}".format(path)
-    else:
-        command = "python {}".format(path_2)
-    os.system(command)
+    add_action_to_system()
 
 
 class Migration(migrations.Migration):

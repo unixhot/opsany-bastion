@@ -33,9 +33,14 @@ class CredentialGroupModelForm(ModelForm):
         fields = "__all__"
         exclude = ["user"]
         error_messages = {
+            # "unique": "凭据分组已存在"
             'name': {'required': "分组名称不能为空", "max_length": "名称最大长度不能超过100个字符"},
             'description': {"max_length": "描述信息最大长度不能超过2000个字符"},
         }
+
+    # def clean_name(self):
+    #     if CredentialGroupModel.fetch_one(name=self.cleaned_data.get("name")):
+    #         raise ValidationError("凭据分组名称已存在！")
 
     def clean_name_unique(self):
         if CredentialGroupModel.fetch_one(name=self.cleaned_data.get("name")):
@@ -52,7 +57,8 @@ class CredentialModelForm(ModelForm):
             'name': {"max_length": "凭据名称最大长度不能超过100个字符", 'required': "凭据名称不能为空"},
             'login_type': {"invalid_choice": "登录方式不存在"},
             'credential_type': {"invalid_choice": "凭据类型不存在"},
-            'login_name': {"max_length": "登录名最大长度不能超过50个字符"},
+            # 'credential_group': {"invalid_choice": "凭据分组不存在"},
+            'login_name': {"max_length": "资源账户最大长度不能超过50个字符"},
             'description': {"max_length": "描述信息最大长度不能超过2000个字符"},
         }
 
@@ -67,6 +73,18 @@ class CredentialModelForm(ModelForm):
         if ssh_key:
             self.cleaned_data["ssh_key"] = ssh_key
         return self.cleaned_data.get("name")
+
+    def clean_login_name(self):
+        login_name = self.cleaned_data.get("login_name", "")
+        if self.check_Chinese(login_name):
+            self.add_error("login_name", "资源账户不支持中文")
+        return login_name
+
+    def check_Chinese(self, word):
+        for ch in word:
+            if '\u4e00' <= ch <= '\u9fff':
+                return True
+        return False
 
     def _check_ssh_key(self, ssh_key):
         if ssh_key:
@@ -104,14 +122,15 @@ class HostGroupModelForm(ModelForm):
         fields = "__all__"
         exclude = ["user"]
         error_messages = {
-            'name': {'required': "主机分组名称不能为空", "max_length": "主机分组名称最大长度不能超过100个字符"},
-            'parent': {"invalid_choice": "上级主机分组不存在"},
+            # "unique": "凭据分组已存在"
+            'name': {'required': "分组名称不能为空", "max_length": "分组名称最大长度不能超过100个字符"},
+            'parent': {"invalid_choice": "上级分组不存在"},
             'description': {"max_length": "描述信息最大长度不能超过2000个字符"},
         }
 
     def clean_name_unique(self):
         if HostGroupModel.fetch_one(name=self.cleaned_data.get("name")):
-            return False, "主机分组已存在"
+            return False, "分组已存在"
         return True, ""
 
     def check_delete(self, id):
@@ -120,7 +139,7 @@ class HostGroupModelForm(ModelForm):
             return False, "当前分组下有关联分组无法删除"
         host_query = HostModel.fetch_one(group_id=id)
         if host_query:
-            return False, "当前分组下有关联主机无法删除"
+            return False, "当前分组下有关联资源无法删除"
         return True, ""
 
 
@@ -130,19 +149,23 @@ class HostModelForm(ModelForm):
         fields = "__all__"
         exclude = ["user"]
         error_messages = {
-            'host_name_code': {'required': "主机唯一标识不能为空", "max_length": "主机名称最大长度不能超过200个字符"},
-            'host_name': {'required': "主机名称不能为空", "max_length": "主机名称最大长度不能超过100个字符"},
+            # "unique": "凭据分组已存在"
+            'host_name_code': {'required': "资源唯一标识不能为空", "max_length": "资源唯一标识最大长度不能超过200个字符"},
+            'host_name': {'required': "资源名称不能为空", "max_length": "资源名称最大长度不能超过100个字符"},
             'system_type': {'required': "系统类型不能为空", "invalid_choice": "系统类型不存在"},
             'protocol_type': {'required': "协议类型不能为空", "invalid_choice": "协议类型不存在"},
             'host_address': {'required': "主机地址不能为空", "max_length": "主机地址最大长度不能超过150个字符"},
-            'port': {'required': "主机端口不能为空"},
-            'group': {'required': "主机分组不能为空", "invalid_choice": "主机分组不存在"},
+            'port': {'required': "端口不能为空"},
+            'group': {'required': "分组不能为空", "invalid_choice": "分组不存在"},
             'description': {"max_length": "描述信息最大长度不能超过2000个字符"},
+            'resource_type': {'required': "资源类型不能为空"},
+            'database_type': {"max_length": "数据库类型最大长度20个字符"},
+            'network_proxy': {"invalid_choice": "网络代理不存在"}
         }
 
     def clean_host_name_unique(self):
         if HostModel.fetch_one(host_name=self.cleaned_data.get("host_name")):
-            return False, "主机已存在"
+            return False, "资源已存在"
         return True, ""
 
     def clean_resource_from(self):
@@ -171,7 +194,7 @@ class HostCredentialModelForm(ModelForm):
         fields = "__all__"
         exclude = ["user"]
         error_messages = {
-            'host': {'required': "主机不能为空", "invalid_choice": "主机不存在"},
+            'host': {'required': "资源不能为空", "invalid_choice": "资源不存在"},
             'credential': {'required': "凭据不能为空", "invalid_choice": "凭据不存在"},
             'credential_group': {'required': "分组不能为空", "invalid_choice": "凭据分组不存在"},
             NON_FIELD_ERRORS: {'unique_together': "记录已存在"}

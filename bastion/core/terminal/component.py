@@ -443,7 +443,6 @@ class SshTerminalThread(threading.Thread):
         while not self._stop_event.is_set():
             self.check_timeout_close()
             text = self.queue.get_message()
-            # app_logger.debug("{}".format(str(text)))
             if text:
                 self.websocket.wait_time = time.time()
                 if isinstance(text['data'], (str, basestring, unicode, bytes)):
@@ -580,7 +579,7 @@ class InterActiveShellThread(threading.Thread):
     RZ_END = b'**\x18B0800000000022d\r\x8a'
     CANCEL = b'\x18\x18\x18\x18\x18\x08\x08\x08\x08\x08'
 
-    def __init__(self, chan, channel, log_name=None, width=90, height=40, elementid=None):
+    def __init__(self, chan, channel, log_name=None, width=90, height=40, elementid=None, database_client=""):
         super(InterActiveShellThread, self).__init__()
         self.chan = chan
         self.channel = channel
@@ -589,6 +588,10 @@ class InterActiveShellThread(threading.Thread):
         self.height = height
         self.elementid = elementid
         self.ssh_base_component = SSHBaseComponent()
+        self.database_client = database_client
+        self.database_flag = False
+        self.error_flag = False
+        self.database_command = ""      # 用于监听用户退出Mysql 命令行
 
     def make_log_dir(self, path):
         try:
@@ -645,6 +648,7 @@ class InterActiveShellThread(threading.Thread):
         last_write_time = {'last_activity_time': begin_time}
         # session_obj = SessionLog.objects.get(channel=channel.channel_name)
         session_obj = None
+        database_re = "^ERROR \d+ .*?: \S+"
         queue = self.ssh_base_component.get_redis_instance()
         queue.pubsub()
         vim_data = ''
@@ -655,6 +659,27 @@ class InterActiveShellThread(threading.Thread):
                 try:
                     r, w, x = select.select([sshchan], [], [])
                     data = sshchan.recv(1024)
+                    if self.database_client:
+                        if self.database_flag:
+                            self.database_client = ""
+                        if self.database_client in data.decode("utf-8"):
+                            # app_logger.info("self.database_client: ||||{}||||".format(self.database_client))
+                            # 获取命令行样式
+                            self.database_command = data.decode("utf-8").split(self.database_client)[0]
+                            # app_logger.info("data:||{}||".format(data.decode("utf-8")))
+                            self.database_flag = True
+                        continue
+                    if self.database_flag and not self.error_flag:
+                        # if "ERROR 1045 (28000): Access denied for user" in data.decode("utf-8"):
+                        if re.match(database_re, data.decode("utf-8")):
+                            self.error_flag = True
+                            self.database_flag = False
+                            data = data.decode("utf-8").split("\r\n")[0].encode("utf-8")
+                    elif self.database_flag and self.error_flag:
+                        break
+                    # 该判定还存在缺陷
+                    if self.database_flag and self.database_command.split("\n")[-1] in data.decode("utf-8"):
+                        break
                     if sz_end:
                         sz_end = False
                         status = self.handle_sz_end(data, channel)
