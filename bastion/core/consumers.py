@@ -11,6 +11,7 @@ import io
 import socket
 from channels.generic.websocket import WebsocketConsumer
 from django_redis import get_redis_connection
+from django.utils import timezone
 try:
     from django.utils.encoding import smart_unicode
 except ImportError:
@@ -206,7 +207,7 @@ class WebSSH(WebsocketConsumer):
             ))
             return False, WebSocketStatusCode.SSH_CHECK_ERROR
 
-    def client_ssh_by_ssh_key(self, ip, port, ssh_key, passphrase, sock=None):
+    def client_ssh_by_ssh_key(self, ip, port, login_name, ssh_key, passphrase, sock=None):
         """
         创建秘钥登陆SSH连接
         """
@@ -214,7 +215,7 @@ class WebSSH(WebsocketConsumer):
             self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             io_pri_key = io.StringIO(ssh_key)
             pri_key = paramiko.RSAKey.from_private_key(io_pri_key, password=passphrase)
-            self.ssh.connect(hostname=ip, port=port, pkey=pri_key, timeout=3, sock=sock)
+            self.ssh.connect(hostname=ip, port=port, username=login_name, pkey=pri_key, timeout=3, sock=sock)
             return True, ""
         except socket.timeout:
             return False, WebSocketStatusCode.TIME_OUT
@@ -281,14 +282,16 @@ class WebSSH(WebsocketConsumer):
             else:
                 password = credential.passphrase
                 ssh_key = credential.ssh_key
-                status, code = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
+                login_name = credential.login_name
+                status, code = self.client_ssh_by_ssh_key(host.host_address, host.port, login_name, ssh_key, password, sock)
         else:
             if credential.credential_type == CredentialModel.CREDENTIAL_PASSWORD:
                 login_name = credential.login_name
                 status, code = self.client_ssh_by_password(host.host_address, host.port, login_name, password, sock)
             else:
                 ssh_key = credential.ssh_key
-                status, code = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
+                login_name = credential.login_name
+                status, code = self.client_ssh_by_ssh_key(host.host_address, host.port, login_name, ssh_key, password, sock)
         if not status:
             self.close_connect(code)
 
@@ -309,6 +312,7 @@ class WebSSH(WebsocketConsumer):
                     host_info.get("ip"),
                     host_info.get("port"),
                     host_info.get("ssh_key"),
+                    host_info.get("username"),
                     host_info.get("password")
             )
         if not status:

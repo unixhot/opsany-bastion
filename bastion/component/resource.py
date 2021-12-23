@@ -60,18 +60,42 @@ class HostGroup:
         user_query = GetUserInfo().get_user_info(request)
         if not user_query:
             return False, "用户不存在"
-        status, message = self._get_host_group_console(user_query, search_data)
-        if not status:
-            app_logging.info('get_host_group_console, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(message)))
-            return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=message))
-        return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, message))
+        host_status, host_message = self._get_host_group_console(user_query, search_data, group_type="host")
+        database_status, database_message = self._get_host_group_console(user_query, search_data, group_type="database")
+        if not host_status:
+            app_logging.info('get_host_group_console, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(host_message)))
+            return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=host_message))
+        if not database_status:
+            app_logging.info('get_host_group_console, parameter：{}, error info: {}'.format((json.dumps(kwargs)), str(database_message)))
+            return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message=database_message))
+        host_count = sum([host.get("count") for host in host_message])
+        database_count = sum([host.get("count") for host in database_message])
+        res_list = [
+            {
+                "name": "主机资源",
+                "group_type": "host",
+                "key": "host_group_parent",
+                "type": "group",
+                "count": host_count,
+                "children": host_message
+            },
+            {
+                "name": "数据库资源",
+                "group_type": "database",
+                "key": "database_group_parent",
+                "type": "group",
+                "count": database_count,
+                "children": database_message
+            },
+        ]
+        return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, res_list))
 
     def _get_host_group_console(self, user_query, search_data=None, group_type="host"):
         all_host_group_queryset = HostGroupModel.fetch_all(parent=None, group_type=group_type).order_by("create_time")
         if user_query.role != 1:
-            host_list = [host_group.to_all_dict(user_query, search_data) for host_group in all_host_group_queryset]
+            host_list = [host_group.to_all_dict(user_query, search_data, user=user_query) for host_group in all_host_group_queryset]
         else:
-            host_list = [host_group.to_all_dict(search_data=search_data) for host_group in all_host_group_queryset]
+            host_list = [host_group.to_all_dict(search_data=search_data, user=user_query) for host_group in all_host_group_queryset]
         return True, host_list
 
     def create_host_group(self, request, **kwargs):
@@ -229,7 +253,7 @@ class Host:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
-                kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+                kwargs["group__in"] = host_group_query.get_children_group_queryset()
         if user_query.role != 1:
             host_queryset = user_query.get_user_host_queryset_v2()
             host_id_list = [host.id for host in host_queryset]
@@ -255,8 +279,8 @@ class Host:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
-                print("host_group_query", host_group_query.get_children_group_queryset() + [host_group_query])
-                kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+                print("host_group_query", host_group_query.get_children_group_queryset())
+                kwargs["group__in"] = host_group_query.get_children_group_queryset()
         if user_query.role != 1:
             host_queryset = user_query.get_user_host_queryset_v2()
             host_id_list = [host.id for host in host_queryset]
@@ -477,8 +501,8 @@ class AuthHost:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
-                print("host_group_query", host_group_query.get_children_group_queryset() + [host_group_query])
-                kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+                # print("host_group_query", host_group_query.get_children_group_queryset())
+                kwargs["group__in"] = host_group_query.get_children_group_queryset()
         host_queryset_v2 = user_query.get_user_host_queryset_v2()
         if user_query.role != 1:
             host_queryset_v3 = user_query.get_user_host_queryset_v3()
@@ -536,7 +560,7 @@ class AuthResource:
             host_group_query = HostGroupModel.fetch_one(id=group_id)
             if host_group_query:
                 kwargs.pop("group_id", None)
-                kwargs["group__in"] = host_group_query.get_children_group_queryset() + [host_group_query]
+                kwargs["group__in"] = host_group_query.get_children_group_queryset()
         host_queryset_v2 = user_query.get_user_host_queryset_v2()
         if user_query.role != 1:
             host_queryset_v3 = user_query.get_user_host_queryset_v3()

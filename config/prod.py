@@ -27,7 +27,7 @@ GUACD_PATH = "/srv/guacamole"
 MEDIA_URL = ''
 TERMINAL_PATH = os.path.join(UPLOAD_PATH, "uploads/terminal")
 ORI_GUACD_PATH = os.path.join(UPLOAD_PATH, "uploads/guacamole")
-TERMINAL_TIMEOUT = int(os.getenv("BK_APP_TERMINAL_TIMEOUT", 1800))
+TERMINAL_TIMEOUT = int(os.getenv("BKAPP_TERMINAL_TIMEOUT", 1800))
 
 DATABASES.update(
     {
@@ -35,16 +35,16 @@ DATABASES.update(
             'ENGINE': 'django.db.backends.mysql',
             'NAME': 'bastion',  # 数据库名
             'USER': 'bastion',  # 数据库用户
-            'PASSWORD': os.getenv("BK_APP_MYSQL_PASSWORD", "bastion"),  # 数据库密码
-            'HOST': os.getenv("BK_APP_MYSQL_HOST", "172.16.16.3"),  # 数据库主机
-            'PORT': int(os.getenv("BK_APP_MYSQL_PORT", "3306")),  # 数据库端口
+            'PASSWORD': os.getenv("BKAPP_MYSQL_PASSWORD", "bastion"),  # 数据库密码
+            'HOST': os.getenv("BKAPP_MYSQL_HOST", "172.16.16.3"),  # 数据库主机
+            'PORT': int(os.getenv("BKAPP_MYSQL_PORT", "3306")),  # 数据库端口
         },
     }
 )
 
-REDIS_HOST = os.getenv("BK_APP_REDIS_HOST", "172.16.16.3")
-REDIS_PORT = os.getenv("BK_APP_REDIS_PORT", "6379")
-REDIS_PASSWORD = os.getenv("BK_APP_REDIS_PASSWORD", "DRwsgTKXUsEY")
+REDIS_HOST = os.getenv("BKAPP_REDIS_HOST", "172.16.16.3")
+REDIS_PORT = os.getenv("BKAPP_REDIS_PORT", "6379")
+REDIS_PASSWORD = os.getenv("BKAPP_REDIS_PASSWORD", "DRwsgTKXUsEY")
 
 CACHES.update(
     {

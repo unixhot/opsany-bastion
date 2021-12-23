@@ -404,11 +404,6 @@ class EsbApi(object):
 
 
 if __name__ == '__main__':
-    # esb = EsbApi("m421zYp6i5v8vOjD-_E8gAzNZ4tSOtmgsE7LWkbEbt8")
-    # esb = EsbApi("LilyG11EWaKBPTOF1ntULcXrkpK4IIu4v_K2eHOlcYg")
-    # esb = EsbApi("0B1S4K4o8g2sgYSXXDWDwPrSrWec4Bizv2K73l7t76Y")
-    esb = EsbApi("TRrWFNe1dCrhmDWv4upSuqmd9vn5wYDWMslj9dYF_9o")
-    print(esb.get_user_info())
-    # print(esb.retrieve_user("demo01"))
-    # print(esb.get_user_info())
+    esb = EsbApi("0LzaWKOlypDory8Zzw7UU3JMTU0safl7gvdAnKd1IfE")
+    print(esb.get_user_info_from_workbench_or_login())
 

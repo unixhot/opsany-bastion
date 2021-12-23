@@ -1,10 +1,10 @@
 from django.db import models
-from datetime import datetime
+import datetime
 
 
 class BaseModel(models.Model):
-    create_time = models.DateTimeField(auto_now_add=datetime.now())
-    update_time = models.DateTimeField(auto_now_add=datetime.now())
+    create_time = models.DateTimeField(auto_now_add=datetime.datetime.now())
+    update_time = models.DateTimeField(auto_now_add=datetime.datetime.now())
 
     class Meta:
         abstract = True
@@ -18,14 +18,14 @@ class BaseModel(models.Model):
 
     @classmethod
     def create(cls, **kwargs):
-        kwargs["create_time"] = datetime.now()
-        kwargs["update_time"] = datetime.now()
+        kwargs["create_time"] = datetime.datetime.now()
+        kwargs["update_time"] = datetime.datetime.now()
         obj = cls(**kwargs)
         obj.save()
         return obj
 
     def update(self, **kwargs):
-        kwargs['update_time'] = datetime.now()
+        kwargs['update_time'] = datetime.datetime.now()
         for k, v in kwargs.items():
             setattr(self, k, v)
         self.save()

@@ -14,11 +14,11 @@ from blueapps.core.celery import celery_app
 # SaaS运行版本，如非必要请勿修改
 RUN_VER = 'open'
 # SaaS应用ID
-APP_CODE = 'bastion-blueking'
+APP_CODE = os.getenv("APP_ID", "bastion")
 # SaaS安全密钥，注意请勿泄露该密钥
-SECRET_KEY = os.getenv("APP_TOKEN", '4f49d205-87fc-4137-a446-27ab878bfa4c')
+SECRET_KEY = os.getenv("APP_TOKEN")
 # PAAS平台URL
-BK_URL = os.getenv("BK_PAAS_HOST", "http://paas.opsany.com")
+BK_URL = os.getenv("BK_PAAS_HOST")
 # UploadPath
 UPLOAD_PATH = os.getenv("BK_APP_UPLOAD_PATH", "/opt/opsany/")
 # IAM URL

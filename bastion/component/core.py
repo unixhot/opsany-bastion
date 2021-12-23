@@ -4,7 +4,9 @@ import json
 from django.http import JsonResponse, HttpResponse
 import uuid
 from django_redis import get_redis_connection
+import time
 import datetime
+from django.utils import timezone
 import logging
 import paramiko
 import settings
@@ -632,7 +634,7 @@ class LinkCheckComponent(CheckUserHostComponent):
         form = GetCacheTokenForm(data)
         esb_obj = EsbApi(token)
         self.create_or_update_current_user(esb_obj)
-        self.update_all_import_user_group_info(esb_obj)
+        # self.update_all_import_user_group_info(esb_obj)
         if form.is_valid():
             user = GetUserInfo().get_user_info(bk_token=token)
             cache_token = str(uuid.uuid4())

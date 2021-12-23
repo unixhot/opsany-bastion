@@ -52,18 +52,18 @@ opsany-bastion使用Python开发，遵循Web2.0规范，使用Web socket Termina
       ```
       logdate = true
       log-format = [%(addr)] [%(ctime)] [%(method)] [%(uri)] [%(proto)] [%(status)] [%(msecs)] [%(referer)] [%(uagent)]
-      
+
       memory-report = true
-      
+
       master = true
       vacuum = true
-      
+
       chdir = /opt/bastion/bastion-backend
       module = wsgi:application
-      
+
       #cheaper = 4
       #cheaper-initial = 4
-      
+
       #workers = 4
       processes = 4
       threads = 2
@@ -71,10 +71,10 @@ opsany-bastion使用Python开发，遵循Web2.0规范，使用Web socket Termina
       #cheaper-overload = 5
       #cheaper-step = 2
       #cheaper-busyness-multiplier = 60
-      
+
       #buffer-size = 8192
       #post-buffering = 8192
-      
+
       max-requests = 1024
       mount = /t/bastion=wsgi.py
       manage-script-name = true
@@ -252,3 +252,52 @@ npm run build
 └── package.json
 └── vue.config.js
 ```
+- ESB组件的添加：
+
+  - 修改ESB配置文件：
+
+    ```
+    # 修改DOMAIN
+    将 install/bastion_esb/bastion/toolkit/configs.py line10处，修改成正确的DOMAIN
+    ```
+
+  - 将组件移动至目标路径：
+
+    ```
+    # 在项目的install/bastion_esb/下有一个bastion目录
+    mv bastion/ PAAS_INSTALL_PATH/esb/components/generic/apis/
+    ```
+
+  - 页面创建系统，添加组件：
+
+    ```
+    打开：http://{DOMAIN}/esb/manager/system/list/，点击添加系统
+    系统名称：BASTION
+    系统标签：OpsAny堡垒机
+    文档分类：默认分类
+
+    打开：http://{DOMAIN}/esb/manager/channel/list/，点击添加通道
+    通道名称：获取堡垒机登录用Token
+    通道路径：/bastion/get_cache_token/
+    所属系统：[BASTION]OpsAny堡垒机
+    对应组件代号：generic.bastion.get_cache_token
+    API类型：执行API
+    ```
+
+  - 创建ESB组件文档，并重启ESB：
+
+    ```
+    # 创建组件文档
+    source /root/.bkrc
+    source $CTRL_DIR/functions
+    export BK_ENV=production
+    export BK_FILE_PATH=/data/bkce/open_paas/cert/saas_priv.txt
+    export PAAS_LOGGING_DIR=/data/bkce/logs/open_paas
+
+    workon open_paas-esb
+    python manage.py sync_api_docs
+
+    # 重启ESB
+    systemctl restart bk-paas-esb.service
+    ```
+

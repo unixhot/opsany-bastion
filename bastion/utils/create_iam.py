@@ -1,33 +1,32 @@
 # -*- coding: utf-8 -*-
 import requests
+from config import APP_CODE, SECRET_KEY
+import os
 
 
 def init_system_to_iam():
     system_info = {
-        "id": "bastion-blueking",
-        "name": "堡垒机IAM测试",
-        "name_en": "bastion-blueking",
-        "description": "堡垒机IAM测试",
-        "description_en": "bastion iam test",
-        "clients": "bastion-blueking,",
+        "id": os.getenv("APP_ID", APP_CODE),
+        "name": "OpsAny堡垒机",
+        "name_en": "bastion",
+        "description": "堡垒机",
+        "description_en": "bastion iam",
+        "clients": "bastion,",
         "provider_config": {
-            "host": "http://paas.opsany.com/t/bastion-blueking/",
+            "host": "{}/o/bastion/".format("BK_PAAS_HOST"),
             "auth": "basic",
             "healthz": "/test/"
         }
     }
     # 必须是内网
-    IAM_HOST = "http://bkiam.service.consul:5001"
-    APP_CODE = "bastion-blueking"
-    SECRET_KEY = "4f49d205-87fc-4137-a446-27ab878bfa4c"
+    IAM_HOST = os.getenv("BK_IAM_V3_INNER_HOST", "http://bkiam.service.consul:5001")
     API = "/api/v1/model/systems/"
     URL = IAM_HOST + API
-    # A = "http://paas.opsany.com/bk_iam"
-    # URL = A + API
     headers = {
         "X-Bk-App-Code": APP_CODE,
         "X-Bk-App-Secret": SECRET_KEY,
         "Content-Type": "application/json"
     }
     res = requests.post(URL, headers=headers, json=system_info)
+    print(res.json())
 

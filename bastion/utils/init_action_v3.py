@@ -28,3 +28,4 @@ def add_action_to_system():
         "Content-Type": "application/json"
     }
     res = requests.post(URL, headers=headers, json=actions)
+    print(res.json())

@@ -6,6 +6,7 @@ import os
 def init_system_to_iam():
     IAM_HOST = os.getenv("BK_IAM_V3_INNER_HOST", "http://bkiam.service.consul:5001")
     APP_CODE = os.getenv("APP_ID")
+    BK_PAAS_HOST = os.getenv("BK_PAAS_HOST")
     SECRET_KEY = os.getenv("APP_TOKEN")
     system_info = {
         "id": APP_CODE,
@@ -15,7 +16,7 @@ def init_system_to_iam():
         "description_en": "bastion",
         "clients": APP_CODE,
         "provider_config": {
-            "host": "http://paas.opsany.com/t/{}/".format(APP_CODE),
+            "host": "{}/o/{}/".format(BK_PAAS_HOST, APP_CODE),
             "auth": "basic",
             "healthz": "/healthz/"
         }

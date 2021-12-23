@@ -1,4 +1,6 @@
+import time
 import datetime
+from django.utils import timezone
 import json
 import logging
 import os
@@ -148,7 +150,10 @@ class SessionLog:
                 continue
             else:
                 try:
-                    session_query.update(**{"end_time": datetime.datetime.now(), "is_finished": True})
+                    session_query.update(**{
+                        "end_time": datetime.datetime.now(),
+                        "is_finished": True
+                    })
                     queue = SSHBaseComponent().get_redis_instance()
                     queue.publish(channel, json.dumps(['close']))
                     success_count += 1
