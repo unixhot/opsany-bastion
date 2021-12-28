@@ -281,7 +281,7 @@ class ImportHostComponent:
             if dic:
                 return True, "credential_group_list", dic
             else:
-                return False, "选择的凭据或凭据分组不存在"
+                return False, "选择的凭据或凭据分组不存在", {}
 
     def import_data(self, request):
         user_name_query = GetUserInfo().get_user_info(request)
@@ -310,20 +310,24 @@ class ImportHostComponent:
         if credential_type == "credential":
             credential_query = CredentialModel.create(**credential_data)
             HostCredential()._create_host_credential({"credential": credential_query.id, "host_list": success_list})
-        if credential_type == "credential_list":
-            for credential_id in credential_data:
-                HostCredential()._create_host_credential({"credential": credential_id, "host_list": success_list})
+        # if credential_type == "credential_list":
+        #     for credential_id in credential_data:
+        #         HostCredential()._create_host_credential({"credential": credential_id, "host_list": success_list})
         if credential_type == "credential_group_list":
             credential_list = credential_data.get("credential_list", [])
             credential_group_list = credential_data.get("credential_group_list", [])
             if credential_list:
-                for credential_id in credential_list:
-                    HostCredential()._create_host_credential(
-                        {"credential": credential_id, "host_list": success_list})
+                # for credential_id in credential_list:
+                #     HostCredential()._create_host_credential(
+                #         {"credential": credential_id, "host_list": success_list})
+                for host in success_list:
+                    HostCredential()._create_host_credential({"host": host, "credential_list": credential_list})
             if credential_group_list:
-                for credential_group_id in credential_group_list:
-                    HostCredential()._create_host_credential(
-                        {"credential_group": credential_group_id, "host_list": success_list})
+                # for credential_group_id in credential_group_list:
+                #     HostCredential()._create_host_credential(
+                #         {"credential_group": credential_group_id, "host_list": success_list})
+                for host in success_list:
+                    HostCredential()._create_host_credential({"host": host, "credential_group": credential_group_list})
 
         message = "成功导入{}条数据".format(str(len(success_list)))
         if error_count:
