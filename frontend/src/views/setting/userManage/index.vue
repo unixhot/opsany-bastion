@@ -15,6 +15,7 @@
 <script>
 import User from './components/User'
 import Group from './components/Group'
+import { getPageAuth } from '@/utils/pageAuth'
 export default {
     components: { User, Group },
     data() {
@@ -23,11 +24,16 @@ export default {
                 { name: '用户列表', key: 'User' },
                 { name: '用户组', key: 'Group' },
             ],
-            activeTab: 'User',
+            activeTab: '',
         }
     },
     methods: {},
-    mounted() {},
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'visit-user-admin')
+        if (hasAuth) {
+            this.activeTab = 'User'
+        }
+    },
 }
 </script>
 <style scoped lang='less'>

@@ -19,6 +19,7 @@ const constantRouterComponents = {
 
 	'home': () => import('@/views/home/home.vue'), //概览
 	'host': () => import('@/views/resources/host.vue'),//主机
+	'dataBase': () => import('@/views/resources/dataBase.vue'),//数据库
 
 	'password': () => import('@/views/voucher/password.vue'),//密码凭证
 	'ssh': () => import('@/views/voucher/ssh.vue'),//密码凭证
@@ -33,8 +34,10 @@ const constantRouterComponents = {
 	'operationLog': () => import('@/views/auditManagement/operationLog'),//系统日志
 
 	'authorizationHost': () => import('@/views/safe/authorizationHost.vue'),//主机
+    'authorizationDatabase':()=>import('@/views/safe/authorizationDatabase.vue'),
 
 	'userManage': () => import('@/views/setting/userManage'), //用户管理
+	'networkProxy': () => import('@/views/setting/networkProxy/networkProxy'), //网络代理
 }
 
 
@@ -43,6 +46,7 @@ const constRouterIcon = {
 	'home': "home", //主页
 
 	'host': "laptop",//主机资源
+	'dataBase': "database",//数据库
 	'application': "hdd",//应用资源
 
 	'password': "lock",//密码凭证
@@ -58,7 +62,10 @@ const constRouterIcon = {
 	'operationLog': "file-search",//命令策略
 
 	'authorizationHost': "laptop",//主机资源
+    'authorizationDatabase':"database",
+    
 	'userManage': 'user',//用户管理
+    'networkProxy':'global'//网络代理
 }
 
 // 前端未找到页面路由（固定不用改）

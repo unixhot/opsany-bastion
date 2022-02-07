@@ -1,6 +1,6 @@
 <template>
     <div>
-        <content-header >
+        <content-header>
             <div slot="docs">
                 通过策略授权，将主机、用户和用户组、资源和凭证进行关联，设置用户允许和禁止支持哪些指令或指令集。
             </div>
@@ -19,6 +19,8 @@ import { readDirfiles } from '@/utils/util'
 import PolicyList from './components/PolicyList'
 import CommandList from './components/CommandList'
 import CommandGroup from './components/CommandGroup'
+import { getPageAuth } from '@/utils/pageAuth'
+
 export default {
     components: { PolicyList, CommandList, CommandGroup },
     data() {
@@ -28,11 +30,15 @@ export default {
                 { key: 'CommandList', name: '命令列表' },
                 { key: 'CommandGroup', name: '命令组' },
             ],
-            activeTab: 'PolicyList',
+            activeTab: '',
         }
     },
-    methods: {},
-    mounted() {},
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'use-command-credential')
+        if (hasAuth) {
+            this.activeTab = 'PolicyList'
+        }
+    },
 }
 </script>
 <style scoped lang='less'>

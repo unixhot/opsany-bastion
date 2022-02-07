@@ -6,16 +6,17 @@
         <div class="content">
             <a-card class="infomation" title="基础信息">
                 <p class="info">
-                    <span>主机名称：{{hostInfo.host_name}}</span>
-                    <span>系统类型：{{hostInfo.system_type}}</span>
-                    <span>协议类型：{{hostInfo.protocol_type}}</span>
-                    <span>主机地址：{{hostInfo.host_address}}</span>
+                    <span>数据库名称：{{hostInfo.host_name}}</span>
+                    <span>数据库类型：{{hostInfo.database_type}}</span>
+                    <span>连接地址：{{hostInfo.host_address}}</span>
+                    <span>网络代理：{{hostInfo.network_proxy&&hostInfo.network_proxy.name || "--"}}</span>
+
                 </p>
                 <p class="info">
                     <span>端口：{{hostInfo.port}}</span>
                     <span>所属分组：{{hostInfo.group&&hostInfo.group.name}}</span>
                     <span>创建时间：{{hostInfo.create_time}}</span>
-                    <span>网络代理：{{hostInfo.network_proxy&&hostInfo.network_proxy.name || "--"}}</span>
+                    <span></span>
                 </p>
                 <p>描述：{{hostInfo .description||"--"}}</p>
             </a-card>
@@ -38,7 +39,7 @@
                         {{text||"--"}}
                     </template>
                     <template slot="action" slot-scope="text,record">
-                        <a v-if="$store.state.btnAuth.btnAuth.bastion_host_credential_delete" @click="remove(record)">移除</a>
+                        <a v-if="$store.state.btnAuth.btnAuth.bastion_database_credential_delete" @click="remove(record)">移除</a>
                     </template>
                 </a-table>
             </div>
@@ -49,7 +50,9 @@
 </template>
 
 <script>
-import { getHost, removeCredentialFromHost } from "@/api/host"
+import { removeCredentialFromHost } from "@/api/host"
+import { getDataBase } from "@/api/dataBase"
+
 export default {
     data() {
         return {
@@ -142,7 +145,7 @@ export default {
             ],
             selectedKeys: ["password"],
             pagination: {
-                showTotal: total => `共有 ${total} 条数据`, 
+                showTotal: total => `共有 ${total} 条数据`,
                 showSizeChanger: true, showQuickJumper: true,
             },
         }
@@ -189,10 +192,10 @@ export default {
         },
         // 获取主机数据
         getHostData(first) {
-            getHost({ id: this.$route.query.id }).then(res => {
+            getDataBase({ id: this.$route.query.id }).then(res => {
                 if (res.code == 200 && res.data) {
                     this.hostInfo = res.data
-                    this.$refs.contentHeader.mainTitle1=res.data.host_name
+                    this.$refs.contentHeader.mainTitle1 = res.data.host_name
                     // 将绑定凭据进行处理
                     if (res.data.credential.password_credential) {
                         this.passwordTableList = res.data.credential.password_credential
@@ -222,7 +225,7 @@ export default {
                         this.groupTableList = []
                     }
 
-                    
+
                     if (first) {
                         // 第一次请求数据
                         this.columns = this.columns1
@@ -298,19 +301,19 @@ export default {
         }
     }
 }
-/deep/.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected{
+/deep/.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
     background: none;
 }
-.ant-menu-item{
+.ant-menu-item {
     background: none;
 }
-.relation{
-    border:1px solid #e8e8e8;
+.relation {
+    border: 1px solid #e8e8e8;
     border-top: none;
-    margin:-16px 0 0 0;
-    padding:5px 0 0 0;
+    margin: -16px 0 0 0;
+    padding: 5px 0 0 0;
 }
-.ant-menu-item{
-    margin:0;
+.ant-menu-item {
+    margin: 0;
 }
 </style>

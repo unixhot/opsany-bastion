@@ -27,7 +27,13 @@
                             </div>
                         </a-spin>
                     </a-tab-pane>
-                    <a-tab-pane key="2" tab="文件传输" class="file_trans" :disabled="!file_manager">
+                    <a-tab-pane
+                        v-if="linkType == 'host'"
+                        key="2"
+                        tab="文件传输"
+                        class="file_trans"
+                        :disabled="!file_manager"
+                    >
                         <a-spin :spinning="fileLoading">
                             <div style="height: 100%; overflow: hidden">
                                 <div class="top_btns">
@@ -151,6 +157,7 @@ export default {
             file_manager: false, //是否可看文件管理
             showRight: true, //是否展示右侧
             fontSize: 14,
+            linkType: 'host',
         }
     },
     methods: {
@@ -167,9 +174,10 @@ export default {
                 width,
                 height,
             }
+            const apiKey = this.linkType == 'dataBase' ? 'databases' : 'terminalchannel'
             this.url = isDev
-                ? `wss://dev.opsany.cn/ws/bastion/terminalchannel/${stringifyUrl(query)}`
-                : `${protocol}://${window.location.host}/ws/bastion/terminalchannel/${stringifyUrl(query)}`
+                ? `wss://dev.opsany.cn/ws/bastion/${apiKey}/${stringifyUrl(query)}`
+                : `${protocol}://${window.location.host}/ws/bastion/${apiKey}/${stringifyUrl(query)}`
 
             this.xtemLoading = true
             getLinkCheck({ token: this.host_token, data_type: 'host' })
@@ -338,7 +346,7 @@ export default {
                 rendererType: 'canvas', //渲染类型
                 rows: 30, //行数
                 convertEol: true, //启用时，光标将设置为下一行的开头
-                scrollback: 500, //终端中的回滚量
+                scrollback: 150000, //终端中的回滚量
                 disableStdin: false, //是否应禁用输入
                 cursorStyle: 'underline', //光标样式
                 cursorBlink: true, //光标闪烁
@@ -362,12 +370,20 @@ export default {
                 this.term.loadAddon(this.fitAddon)
                 // 支持输入与粘贴方法
                 this.term.onData((key) => {
-                    this.socket.onsend(JSON.stringify(key)) //转换为字符串
+                    const stringKeys = JSON.stringify(key)
+                    // if (this.linkType == 'dataBase') {
+                    //     if (encodeURI(key) == '%03') {
+                    //         return
+                    //     }
+                    // }
+                    this.socket.onsend(stringKeys) //转换为字符串
                 })
 
                 this.send(JSON.stringify(['set_size', rows, cols, cols, rows]))
 
-                this.fitAddon.fit()
+                this.$nextTick(() => {
+                    this.fitAddon.fit()
+                })
                 this.term.onResize((size) => {
                     const { rows, cols } = size
                     this.send(JSON.stringify(['set_size', rows, cols, cols, rows]))
@@ -517,6 +533,8 @@ export default {
                     { key: 5, errorMsg: '连接超时，请退出后重新连接。' },
                     { key: 6, errorMsg: '凭证验证失败，请联系管理员。' },
                     { key: 7, errorMsg: '创建连接失败，请退出后重新连接。' },
+                    { key: 8, errorMsg: '目前不支持该类型数据库。' },
+                    { key: 9, errorMsg: '无法连接到代理服务器。' },
                 ]
                 if (msg.data.indexOf('ws_errcode') > -1) {
                     let str = msg.data.replace(/ws_errcode:/, '')
@@ -567,6 +585,9 @@ export default {
     },
     mounted() {
         this.host_token = this.$route.query.host_token
+        let linkType = this.$route.query.linkType || ''
+        const typeList = ['host', 'dataBase']
+        this.linkType = typeList.includes(linkType) ? linkType : typeList[0]
         this.getAgentInfo()
         const fn = this.debounce(this.resizeTerm, 100)
         window.addEventListener('resize', fn)

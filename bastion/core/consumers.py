@@ -9,9 +9,9 @@ import threading
 import os
 import io
 import socket
+from django.utils import timezone
 from channels.generic.websocket import WebsocketConsumer
 from django_redis import get_redis_connection
-from django.utils import timezone
 try:
     from django.utils.encoding import smart_unicode
 except ImportError:
@@ -311,8 +311,8 @@ class WebSSH(WebsocketConsumer):
             status, code = self.client_ssh_by_ssh_key(
                     host_info.get("ip"),
                     host_info.get("port"),
+                    host_info.get("username", "root"),
                     host_info.get("ssh_key"),
-                    host_info.get("username"),
                     host_info.get("password")
             )
         if not status:
@@ -364,12 +364,14 @@ class WebSSH(WebsocketConsumer):
 
     def disconnect(self, close_code):
         self.close_ssh()
-        time.sleep(3)
-        if isinstance(self.session_log, SessionLogModel):
+        time.sleep(0.5)
+        try:
             self.session_log.update(**{
                 "is_finished": True,
                 "end_time": datetime.datetime.now()
             })
+        except Exception as e:
+            app_logging.error("[ERROR] Update Session Log error: {}, param: {}".format(str(e), str(self.session_log)))
         self.close()
 
     def close_ssh(self):
@@ -631,6 +633,8 @@ class GuacamoleWebsocket(WebsocketConsumer):
             command = '/opt /guacamole-server-1.2.0/src/guacenc/guacenc -s '\
                       + width + "x" + height + ' -r 1000000 -f ' + full_path
             os.system(command)
+        else:
+            app_logging.error("[ERROR] Windows Terminal Not Find Session Log, Channel name: {}".format(self.channel_name))
         self.close()
         self.GUACD_CLIENT.client.close()
         self.close()
@@ -998,12 +1002,14 @@ class Database(WebsocketConsumer):
 
     def disconnect(self, close_code):
         self.close_ssh()
-        time.sleep(3)
-        if isinstance(self.session_log, SessionLogModel):
+        time.sleep(0.5)
+        try:
             self.session_log.update(**{
                 "is_finished": True,
                 "end_time": datetime.datetime.now()
             })
+        except Exception as e:
+            app_logging.error("[ERROR] Update Session Log error: {}, param: {}".format(str(e), str(self.session_log)))
         self.close()
 
     def close_ssh(self):

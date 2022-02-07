@@ -1,6 +1,7 @@
 <template>
     <div>
         <a-form-model
+            style="padding:10px 0 0 0"
             ref="formData"
             layout="horizontal"
             :model="formData"
@@ -11,7 +12,13 @@
             <a-form-model-item label="策略名称" prop="name">
                 <a-input placeholder="请输入策略名称" :disabled="!!formData.id" v-model="formData.name"></a-input>
             </a-form-model-item>
-            <a-form-model-item label="有效期">
+            <a-form-model-item>
+                <span slot="label">
+                    <span>有效期</span>
+                    <a-tooltip title="指选择策略生效时间和策略的失效时间">
+                        <a-icon style="margin:0 0 0 3px;color:#666" type="exclamation-circle" />
+                    </a-tooltip>
+                </span>
                 <a-date-picker
                     v-model="start_time"
                     allowClear
@@ -36,7 +43,13 @@
                 <a-checkbox v-model="formData.file_manager"> 文件管理 </a-checkbox>
                 <a-checkbox style="margin-left: 20px" v-model="formData.copy_tool"> 剪贴板 </a-checkbox>
             </a-form-model-item>
-            <a-form-model-item label="登录时段限制" class="time_item">
+            <a-form-model-item class="time_item">
+                <span slot="label">
+                    <span>登录时段限制</span>
+                    <a-tooltip title="指在策略有效期内选择登录资源的时间段权限">
+                        <a-icon style="margin:0 0 0 3px;color:#666" type="exclamation-circle" />
+                    </a-tooltip>
+                </span>
                 <SelectTime v-model="formData.login_time_limit" ref="SelectTime"></SelectTime>
             </a-form-model-item>
             <a-form-model-item label="IP限制类型">
@@ -114,7 +127,7 @@ export default {
                 limit_list: [{ required: true, type: 'array', message: '请填写IP', trigger: 'change' }],
             },
             labelCol: {
-                span: 3,
+                span: 4,
             },
             wrapperCol: {
                 span: 20,

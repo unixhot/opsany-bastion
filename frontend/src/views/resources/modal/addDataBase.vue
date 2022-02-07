@@ -2,31 +2,23 @@
     <div>
         <a-drawer :body-style="{ paddingBottom: '80px' }" width="1020px" :title="title" placement="right" :visible="visible" @close="onClose">
             <a-form :form="hostForm" :label-col="{ span: 3 }" :wrapper-col="{ span: 21 }">
-                <a-form-item label="主机名称">
-                    <a-input placeholder="请输入主机名称" v-decorator="['host_name', { rules: [{ required: true, message: '请输入主机名称' }] }]"></a-input>
+                <a-form-item label="数据库名称">
+                    <a-input placeholder="请输入数据库名称" v-decorator="['host_name', { rules: [{ required: true, message: '请输入数据库名称' }] }]"></a-input>
                 </a-form-item>
                 <a-form-item v-if="handleType=='add' || (handleType=='edit'&&!activeHost.host_name_code)" label="唯一标识">
                     <a-input placeholder="请输入唯一标识" v-decorator="['host_name_code', { rules: [{ required: true, message: '请输入唯一标识' },
                     {pattern:/^[^\u4e00-\u9fa5]*$/,message:'唯一标识不能含有中文'}] }]"></a-input>
                 </a-form-item>
-
-                <a-form-item label="系统类型">
-                    <a-select @change="systemChange" placeholder="请选择系统类型" v-decorator="['system_type', { rules: [{ required: true, message: '请选择系统类型' }] }]">
-                        <a-select-option value="Windows">Windows</a-select-option>
-                        <a-select-option value="Linux">Linux</a-select-option>
+                <a-form-item label="数据库类型">
+                    <a-select placeholder="请选择数据库类型" v-decorator="['database_type', { rules: [{ required: true, message: '请选择数据库类型' }] }]">
+                        <a-select-option value="mysql">MySQL</a-select-option>
+                        <a-select-option value="mongodb">MongoDB</a-select-option>
+                        <!-- <a-select-option value="oracle">Oracle</a-select-option> -->
+                        <a-select-option value="redis">Redis</a-select-option>
                     </a-select>
                 </a-form-item>
 
-                <a-form-item label="协议类型">
-                    <a-select placeholder="请选择协议类型" v-decorator="['protocol_type', { rules: [{ required: true, message: '请选择协议类型' }] }]">
-                        <a-select-option value="SSH">SSH</a-select-option>
-                        <a-select-option value="RDP">RDP</a-select-option>
-                        <!-- <a-select-option value="Telnet">Telnet</a-select-option>
-                        <a-select-option value="VNC">VNC</a-select-option> -->
-                    </a-select>
-                </a-form-item>
-
-                <a-form-item label="主机地址">
+                <a-form-item label="连接地址">
                     <a-input placeholder="请输入有效的IP地址或域名" v-decorator="['host_address', { rules: [{ required: true, message: '请输入有效的IP地址或域名' }] }]"></a-input>
                 </a-form-item>
 
@@ -38,10 +30,9 @@
                     <a-tree-select :tree-data="fatherData" placeholder="请选择分组" v-decorator="['group', { rules: [{ required: true, message: '请选择所属分组' }] }]"></a-tree-select>
                 </a-form-item>
 
-                <a-form-item label="主机描述">
+                <a-form-item label="数据库描述">
                     <a-textarea placeholder="请输入，最多输入200个汉字或字符" v-decorator="['description', { rules: [{ required: false},{max:200,message:'最多输入200个汉字或字符'}] }]"></a-textarea>
                 </a-form-item>
-
                 <a-form-item label="网络代理">
                     <a-radio-group v-model="showNetwork">
                         <a-radio :value="false">
@@ -57,7 +48,6 @@
                         </a-select-option>
                     </a-select>
                 </a-form-item>
-
                 <a-form-item label="添加凭证">
                     <a-radio-group v-model="addMethodType" button-style="solid">
                         <a-radio-button v-if="handleType=='add'" value="immediately">
@@ -96,13 +86,7 @@
                     <a-input placeholder="请输入凭证名称" v-decorator="['name', { rules: [{ required: true, message: '请输入凭证名称' }] }]"></a-input>
                 </a-form-item>
 
-                <a-form-item>
-                    <span slot="label">
-                        <span>资源账户</span>
-                        <a-tooltip title="资源账户是指操作系统登录账号">
-                            <a-icon style="margin:0 0 0 3px;color:#666" type="exclamation-circle" />
-                        </a-tooltip>
-                    </span>
+                <a-form-item label="资源账户">
                     <a-input autocomplete="new-password" placeholder="请输入资源账户的名称" v-decorator="['login_name', { rules: [{ required:true, message: '请输入资源账户' },{pattern:/^[^\u4e00-\u9fa5]*$/,message:'资源账户不能含有中文'}] }]"></a-input>
                 </a-form-item>
                 <div v-if="verificationMethod=='password'">
@@ -157,7 +141,7 @@
 </template>
 
 <script>
-import { addHost, editHost } from "@/api/host"
+import { addDataBase, editDataBase } from "@/api/dataBase"
 import { getGroup } from "@/api/group"
 import { getCredential } from "@/api/credential"
 import { getNetworkProxy } from "@/api/networkProxy"
@@ -356,20 +340,6 @@ export default {
         handleChange(nextTargetKeys, direction, moveKeys) {
             this.targetKeys = nextTargetKeys;
         },
-        // 选择系统自动填写协议类型和端口
-        systemChange(val) {
-            if (val == "Windows") {
-                this.hostForm.setFieldsValue({
-                    protocol_type: "RDP",
-                    port: 3389
-                })
-            } else {
-                this.hostForm.setFieldsValue({
-                    protocol_type: "SSH",
-                    port: 22
-                })
-            }
-        },
         // 提交
         onSubmit() {
             let values1, values2
@@ -411,7 +381,7 @@ export default {
                 }
 
                 if (this.handleType == "add") {
-                    addHost(updata).then(res => {
+                    addDataBase(updata).then(res => {
                         if (res.code == 200) {
                             this.$message.success(res.message)
                             this.onClose()
@@ -425,7 +395,7 @@ export default {
                     if (!updata.host_name_code) {
                         updata.host_name_code = this.activeHost.host_name_code
                     }
-                    editHost(updata).then(res => {
+                    editDataBase(updata).then(res => {
                         if (res.code == 200) {
                             this.$message.success(res.message)
                             this.onClose()
@@ -451,11 +421,12 @@ export default {
         },
         show(selectGroupId, record) {
             this.visible = true
+
             this.getAllCredential()
             this.getNetworkProxyList()
             this.titles = this.titles1
             if (record) {
-                this.title = "修改主机"
+                this.title = "修改数据库"
                 this.activeHost = record
                 this.handleType = "edit"
                 this.addMethodType = "have"
@@ -488,7 +459,7 @@ export default {
                 this.$nextTick(function () {
                     this.hostForm.setFieldsValue({
                         host_name: record.host_name,
-                        system_type: record.system_type,
+                        database_type: record.database_type,
                         protocol_type: record.protocol_type,
                         host_address: record.host_address,
                         port: record.port,
@@ -499,16 +470,21 @@ export default {
             } else {
                 this.loginType = "auto"
                 this.addMethodType = "immediately"
-                this.title = "新建主机"
+                this.title = "新建数据库"
                 this.handleType = "add"
                 if (selectGroupId && selectGroupId != "all") {
                     this.$nextTick(function () {
                         this.hostForm.setFieldsValue({ group: selectGroupId })
                     })
                 } else {
-                    this.$nextTick(function () {
-                        this.hostForm.setFieldsValue({ group: 1 })
+                    let group = this.fatherData.find(item => {
+                        return item.name == "默认分组"
                     })
+                    if (group) {
+                        this.$nextTick(function () {
+                            this.hostForm.setFieldsValue({ group: group.id })
+                        })
+                    }
                 }
             }
         },

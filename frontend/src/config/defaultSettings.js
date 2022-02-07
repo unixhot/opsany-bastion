@@ -29,7 +29,7 @@ export default {
 	production: process.env.NODE_ENV === 'production' && process.env.VUE_APP_PREVIEW !== 'true',
 	baseUrl: process.env.NODE_ENV === 'development' ?
 		// 'https://dev.opsany.cn/t/bastion/api/bastion/v0_1/' //服务器
-		'http://192.168.0.26:9000/api/bastion/v0_1/' //郭
+		'http://192.168.0.9:8000/api/bastion/v0_1/' //郭
 		// 'http://192.168.0.10:8000/api/bastion/v0_1/' //胡兴起
 		:
 		window.API_ROOT + "/api/bastion/v0_1/",

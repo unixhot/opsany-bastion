@@ -88,3 +88,12 @@ export const getUserHost = (data = {}) => {
         params: data
     })
 }
+
+// 从cmdb批量添加主机
+export const batchAddHosrFromCmdb  = (data = {}) => {
+    return request({
+        url: "check-import/",
+        method: "post",
+        data
+    })
+}

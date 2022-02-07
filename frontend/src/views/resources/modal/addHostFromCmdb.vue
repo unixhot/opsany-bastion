@@ -82,12 +82,12 @@
                 </a-form-item>
 
                 <a-form-item label="资源账户">
-                    <a-input placeholder="请输入资源账户的名称" v-decorator="['login_name', { rules: [{ required:true, message: '请输入资源账户' }] }]"></a-input>
+                    <a-input autoComplete="off" placeholder="请输入资源账户的名称" v-decorator="['login_name', { rules: [{ required:true, message: '请输入资源账户' }] }]"></a-input>
                 </a-form-item>
                 <div v-if="verificationMethod=='password'">
                     <template v-if="loginType=='auto'">
                         <a-form-item label="密码">
-                            <a-input-password placeholder="请输入密码" v-decorator="['login_password', { rules: [{ required: true, message: '请输入密码' }] }]"></a-input-password>
+                            <a-input-password autoComplete="off" placeholder="请输入密码" v-decorator="['login_password', { rules: [{ required: true, message: '请输入密码' }] }]"></a-input-password>
                         </a-form-item>
                     </template>
                 </div>
@@ -120,7 +120,7 @@
                         </a-radio>
                     </a-radio-group>
                 </a-form-item>
-                <a-transfer :operations="operations" :titles="titles" :list-style="listStyle" style="margin:0 0 0 8.33%" @change="handleChange" :dataSource="mockData" :targetKeys="targetKeys" show-search :render="item => item.title" />
+                <a-transfer :operations="operations" :titles="titles" :list-style="listStyle" style="margin:0 0 0 8.33%" @change="handleChange" :dataSource="mockData" :targetKeys="targetKeys" show-search :render="transferRender" />
             </a-form>
         </a-modal>
     </div>
@@ -210,6 +210,51 @@ export default {
         }
     },
     methods: {
+        // 穿梭框渲染
+        transferRender(item) {
+            let customLabel
+            // 凭证种类为分组时展示关联的凭证数量
+            if (this.credential_type == "group") {
+                if (!item.passwordNumber && !item.sshNumber) {
+                    // 分组下的凭证数量为0提示不可选择
+                    customLabel = (
+                        <span class="custom-item">
+                            <a-tooltip placement="top" title="该分组没有关联密码凭证和SSH密钥,不可选择。">
+                                <span style="margin:0 10px 0 0">
+                                    {item.title}
+                                </span>
+                                <span>
+                                    ({item.passwordNumber}/{item.sshNumber})
+                                </span>
+                            </a-tooltip>
+                        </span>
+                    )
+                } else {
+                    customLabel = (
+                        <span class="custom-item">
+                            <span style="margin:0 10px 0 0">
+                                {item.title}
+                            </span>
+                            <span>
+                                ({item.passwordNumber}/{item.sshNumber})
+                            </span>
+                        </span>
+                    )
+                }
+
+            } else {
+                customLabel = (
+                    <span class="custom-item">
+                        {item.title}
+                    </span>
+                )
+            }
+
+            return {
+                label: customLabel,
+                value: item.title,
+            };
+        },
         onClose() {
             this.visible = false
             this.hostForm.resetFields()
@@ -274,9 +319,14 @@ export default {
                 if (res.code == 200 && res.data) {
                     let arr = []
                     res.data.map(item => {
+                        let passwordNumber = item.credential?.password_credential?.length || 0
+                        let sshNumber = item.credential?.ssh_credential?.length || 0
                         arr.push({
                             key: item.id + "",
-                            title: item.name
+                            title: item.name,
+                            passwordNumber: passwordNumber,
+                            sshNumber: sshNumber,
+                            disabled: !passwordNumber && !sshNumber
                         })
                     })
                     this.allgroupList = arr
@@ -284,7 +334,7 @@ export default {
                 }
             })
         },
-        show(record) {
+        show(record, selectGroupId) {
             this.selectedHost = record
             this.visible = true
             this.credential_type = "password"
@@ -294,7 +344,6 @@ export default {
             this.loginType = "auto"
             this.addMethodType = "immediately"
 
-            console.log(record)
             let system
             if (record.opt_os && record.opt_os.indexOf("Window") > -1) {
                 system = "Windows"
@@ -321,6 +370,16 @@ export default {
                     { label: '公网IP', value: record.ip1 },
                     { label: '内网IP', value: record.ip2 },
                 ]
+            }
+
+            if (selectGroupId && selectGroupId != "all") {
+                this.$nextTick(function () {
+                    this.hostForm.setFieldsValue({ group: selectGroupId })
+                })
+            } else {
+                this.$nextTick(function () {
+                    this.hostForm.setFieldsValue({ group: 1 })
+                })
             }
 
         },
@@ -363,7 +422,7 @@ export default {
                     updata.credential_group_list = this.selectedgroupList
                 }
                 updata.resource_from = "cmdb"
-                updata.host_name_code=this.selectedHost.name
+                updata.host_name_code = this.selectedHost.name
                 addHost(updata).then(res => {
                     if (res.code == 200) {
                         this.$message.success(res.message)
@@ -380,4 +439,12 @@ export default {
 }
 </script>
 <style lang="less" scoped>
+/deep/.ant-modal-body {
+    height: 680px;
+    overflow: scroll;
+    overflow-x: auto;
+}
+/deep/.ant-modal {
+    top: 30px;
+}
 </style>

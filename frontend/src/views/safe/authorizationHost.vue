@@ -8,64 +8,93 @@
         <a-card>
             <div class="content">
                 <div class="content_left">
-                    <a-tree @select="treeSelect" :selectedKeys="selectedKeys" v-if="showTree" defaultExpandAll :show-line="true" :treeData="treeData">
+                    <a-tree
+                        @select="treeSelect"
+                        :selectedKeys="selectedKeys"
+                        v-if="showTree"
+                        defaultExpandAll
+                        :show-line="true"
+                        :treeData="treeData"
+                    >
                         <template slot="action" slot-scope="row">
-                            <span :title="row.title" class="treetitle">{{ row.title }}</span>
+                            <span :title="row.title" class="treetitle">{{ row.title }} ({{ row.count || 0 }})</span>
                         </template>
                     </a-tree>
+                    <a-spin v-else />
                 </div>
                 <div class="content_right">
                     <div class="top_search">
                         <div>
-                            <a-input-search v-model="pagination.search_data" @search="searchTable" placeholder="请输入关键字搜索" style="width: 300px" allowClear>
+                            <a-input-search
+                                v-model="pagination.search_data"
+                                @search="searchTable"
+                                placeholder="请输入关键字搜索"
+                                style="width: 300px"
+                                allowClear
+                            >
                                 <a-select slot="addonBefore" style="width: 100px" v-model="pagination.search_type">
                                     <a-select-option v-for="item in searchList" :key="item.key">{{
-                                item.name
-                            }}</a-select-option>
+                                        item.name
+                                    }}</a-select-option>
                                 </a-select>
                             </a-input-search>
-
                         </div>
                         <div>
                             <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
                         </div>
                     </div>
 
-                    <a-table :loading="tableLoading" @change="onChange" :pagination="pagination" :columns="columns" :data-source="tableData">
-                        <template slot="action" slot-scope="text,record">
-                            <a-button v-if="$store.state.btnAuth.btnAuth.bastion_ops_host_login" size="small" type="link" @click="handleLogin(record)">登录</a-button>
+                    <a-table
+                        :loading="tableLoading"
+                        @change="onChange"
+                        :pagination="pagination"
+                        :columns="columns"
+                        :data-source="tableData"
+                    >
+                        <template
+                            v-if="$store.state.btnAuth.btnAuth.bastion_ops_host_login"
+                            slot="action"
+                            slot-scope="text, record"
+                        >
+                            <a-button v-if="record.time_frame" size="small" type="link" @click="handleLogin(record)"
+                                >登录</a-button
+                            >
+                            <a-tooltip
+                                v-else
+                                placement="left"
+                                title="由于访问策略限制，当前时段不允许登录。"
+                                :overlayStyle="{ maxWidth: '300px' }"
+                                arrow-point-at-center
+                            >
+                                <a-button disabled size="small" type="link" @click="handleLogin(record)">登录</a-button>
+                            </a-tooltip>
                         </template>
                     </a-table>
                 </div>
             </div>
         </a-card>
-     
-      
+
         <LoginHostModal ref="LoginHostModal"></LoginHostModal>
- 
     </div>
 </template>
 
 <script>
-import ContentHeader from "@/views/components/ContentHeader"
+import ContentHeader from '@/views/components/ContentHeader'
 
 import LoginHostModal from '../resources/modal/LoginHostModal.vue'
-import { getUserHost, getHostGroup } from "@/api/host"
-
-
+import { getUserHost, getHostGroup } from '@/api/host'
+import { getPageAuth } from '@/utils/pageAuth'
 export default {
     data() {
         return {
             // 分组数据(左侧树)
             treeData: [
                 {
-                    key: "all",
-                    title: "全部主机",
-                    scopedSlots: { title: "action" },
-                    children: [
-
-                    ]
-                }
+                    key: 'all',
+                    title: '全部主机',
+                    scopedSlots: { title: 'action' },
+                    children: [],
+                },
             ],
             searchList: [
                 { name: '主机名称', key: 'host_name' },
@@ -79,7 +108,7 @@ export default {
                     dataIndex: 'host_name',
                     ellipsis: true,
                     scopedSlots: { customRender: 'name' },
-                    width:220,
+                    width: 220,
                 },
                 {
                     title: '主机地址',
@@ -91,7 +120,7 @@ export default {
                     dataIndex: 'system_type',
                     ellipsis: true,
                 },
-             
+
                 {
                     title: '授权时间',
                     dataIndex: 'create_time',
@@ -101,7 +130,7 @@ export default {
                     title: '操作',
                     width: 200,
                     scopedSlots: { customRender: 'action' },
-                    align: 'center'
+                    align: 'center',
                 },
             ],
             showTree: false,
@@ -109,19 +138,27 @@ export default {
             fatherData: [],
             tableLoading: false,
             pagination: {
-                total: 0, current: 1, pageSize: 10, showTotal: total => `共有 ${total} 条数据`,
-                showSizeChanger: true, showQuickJumper: true, search_type: 'host_name',
+                total: 0,
+                current: 1,
+                pageSize: 10,
+                showTotal: (total) => `共有 ${total} 条数据`,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                search_type: 'host_name',
                 search_data: undefined,
             },
             // 选中的分组id
             selectGroupId: undefined,
             // 树选中的项
-            selectedKeys: ["all"],
+            selectedKeys: ['all'],
         }
     },
-    mounted() {
-        this.getHostData()
-        this.getHostGroupData()
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'visit-authorization-host')
+        if (hasAuth) {
+            this.getHostData()
+            this.getHostGroupData()
+        }
     },
     methods: {
         // 选中分组(树)
@@ -149,22 +186,24 @@ export default {
                 updata.search_type = this.pagination.search_type
                 updata.search_data = this.pagination.search_data
             }
-            if (this.selectGroupId != "all") {
+            if (this.selectGroupId != 'all') {
                 updata.group_id = this.selectGroupId
             }
-            getUserHost(updata).then(res => {
-                if (res.code == 200 && res.data) {
-                    this.pagination.total = res.data.total
-                    this.pagination.current = res.data.current
-                    this.pagination.pageSize = res.data.pageSize
-                    res.data.data.map(item => {
-                        item.key = item.id
-                    })
-                    this.tableData = res.data.data
-                }
-            }).finally(() => {
-                this.tableLoading = false
-            })
+            getUserHost(updata)
+                .then((res) => {
+                    if (res.code == 200 && res.data) {
+                        this.pagination.total = res.data.total
+                        this.pagination.current = res.data.current
+                        this.pagination.pageSize = res.data.pageSize
+                        res.data.data.map((item) => {
+                            item.key = item.id
+                        })
+                        this.tableData = res.data.data
+                    }
+                })
+                .finally(() => {
+                    this.tableLoading = false
+                })
         },
         // 搜索
         searchTable(val) {
@@ -180,39 +219,48 @@ export default {
         // 获取分组数据(树)
         getHostGroupData() {
             this.showTree = false
-            getHostGroup().then(res => {
-                if (res.code == 200 && res.data) {
-                    organizeTree(res.data, 2)
-                    this.treeData[0].children = res.data
-                    this.fatherData = res.data
+            let allNumber = 0
+            getHostGroup()
+                .then((res) => {
+                    if (res.code == 200 && res.data) {
+                        organizeTree(res.data, 2)
+                        this.treeData[0].children = res.data
+                        this.treeData[0].children.map((item) => {
+                            allNumber += item.count
+                        })
+                        this.treeData[0].count = allNumber
+                        this.fatherData = res.data
+                        this.showTree = true
+                    }
+
+                    function organizeTree(treedata, layer) {
+                        treedata.map((item) => {
+                            item.key = item.id
+                            item.title = item.name
+                            item.scopedSlots = { title: 'action' }
+                            item.layer = layer
+
+                            item.value = item.id
+
+                            if (item.children && item.children.length > 0) {
+                                organizeTree(item.children, layer + 1)
+                            }
+                        })
+                    }
+                })
+                .finally(() => {
                     this.showTree = true
-                }
-
-                function organizeTree(treedata, layer) {
-                    treedata.map(item => {
-                        item.key = item.id
-                        item.title = item.name
-                        item.scopedSlots = { title: "action" }
-                        item.layer = layer
-
-                        item.value = item.id
-
-                        if (item.children && item.children.length > 0) {
-                            organizeTree(item.children, layer + 1)
-                        }
-                    })
-                }
-            })
+                })
         },
         //登录弹窗
         handleLogin(row) {
             this.$refs.LoginHostModal.showModal(row)
-        }
+        },
     },
     components: {
         ContentHeader,
         LoginHostModal,
-    }
+    },
 }
 </script>
 
@@ -225,22 +273,22 @@ export default {
         flex: 0px 300 300;
         border-right: 1px solid #f5f5f5;
         // padding: 0 20px 0 0;
-        min-width:200px;
-        .treetitle{
-            width:90px;
+        min-width: 200px;
+        .treetitle {
+            width: 90px;
             display: inline-block;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .treetitle{
-            width:100%;
+        .treetitle {
+            width: 100%;
             display: inline-block;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        /deep/.ant-tree-node-content-wrapper{
+        /deep/.ant-tree-node-content-wrapper {
             max-width: calc(100% - 50px);
         }
     }
@@ -262,5 +310,12 @@ export default {
 /deep/.ant-tree-treenode-switcher-close,
 /deep/.ant-tree-treenode-switcher-open {
     position: relative;
+}
+/deep/.ant-spin-spinning {
+    width: 100%;
+    height: 100%;
+}
+/deep/.ant-spin-dot-spin {
+    top: 50%;
 }
 </style>

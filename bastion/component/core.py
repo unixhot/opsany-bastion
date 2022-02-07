@@ -646,6 +646,7 @@ class LinkCheckComponent(CheckUserHostComponent):
                     "ip": form.cleaned_data.get("ip"),
                     "host_name": form.cleaned_data.get("name"),
                     "system_type": form.cleaned_data.get("system_type"),
+                    "username": form.cleaned_data.get("username"),
                     "port": form.cleaned_data.get("ssh_port")
                 },
                 "file_download": True,
@@ -655,7 +656,6 @@ class LinkCheckComponent(CheckUserHostComponent):
             }
             if form.cleaned_data.get("password") and not form.cleaned_data.get("ssh_key_id"):
                 cache_token_data["host_info"]["password"] = form.cleaned_data.get("password")
-                cache_token_data["host_info"]["username"] = form.cleaned_data.get("username")
                 cache_token_data["login_type"] = "password"
             if form.cleaned_data.get("ssh_key_id"):
                 esb_obj = EsbApi(token)

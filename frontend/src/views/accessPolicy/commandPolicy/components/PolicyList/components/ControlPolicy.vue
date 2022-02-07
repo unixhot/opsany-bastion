@@ -8,7 +8,7 @@
             @close="handleCancel"
         >
             <a-spin :spinning="infoLoading">
-                <div style="margin-bottom: 30px">
+                <div style="margin:20px 0 40px 0">
                     <a-steps :current="activeCurrent" style="width: 90%; margin: 0 auto" @change="changeActiceCurrent">
                         <a-step title="配置基本信息"> </a-step>
                         <a-step title="关联命令/命令组"> </a-step>

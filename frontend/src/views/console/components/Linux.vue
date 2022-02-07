@@ -89,7 +89,6 @@ export default {
                         this.xtemLoading = false
                         this.initSocket()
                     })
-
             })
         },
 
@@ -99,7 +98,7 @@ export default {
                 rendererType: 'canvas', //渲染类型
                 rows: 30, //行数
                 convertEol: true, //启用时，光标将设置为下一行的开头
-                scrollback: 500, //终端中的回滚量
+                scrollback: 150000, //终端中的回滚量
                 disableStdin: false, //是否应禁用输入
                 cursorStyle: 'underline', //光标样式
                 cursorBlink: true, //光标闪烁
@@ -127,8 +126,9 @@ export default {
                 })
 
                 this.send(JSON.stringify(['set_size', rows, cols, cols, rows]))
-
-                this.fitAddon.fit()
+                this.$nextTick(() => {
+                    this.fitAddon.fit()
+                })
                 this.term.onResize((size) => {
                     const { rows, cols } = size
                     this.send(JSON.stringify(['set_size', rows, cols, cols, rows]))
@@ -272,6 +272,8 @@ export default {
                     { key: 5, errorMsg: '连接超时，请退出后重新连接。' },
                     { key: 6, errorMsg: '凭证验证失败，请联系管理员。' },
                     { key: 7, errorMsg: '创建连接失败，请退出后重新连接。' },
+                    { key: 8, errorMsg: '目前不支持该类型数据库。' },
+                    { key: 9, errorMsg: '无法连接到代理服务器。' },
                 ]
                 if (msg.data.indexOf('ws_errcode') > -1) {
                     let str = msg.data.replace(/ws_errcode:/, '')

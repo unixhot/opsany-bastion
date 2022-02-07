@@ -1,14 +1,7 @@
 <template>
     <div>
-        <a-drawer :body-style="{ paddingBottom: '80px' }" width="1020px" :title="title" placement="right" :visible="visible" @close="onClose">
-            <a-form :form="hostForm" :label-col="{ span: 3 }" :wrapper-col="{ span: 21 }">
-                <a-form-item label="主机名称">
-                    <a-input placeholder="请输入主机名称" v-decorator="['host_name', { rules: [{ required: true, message: '请输入主机名称' }] }]"></a-input>
-                </a-form-item>
-                <a-form-item v-if="handleType=='add' || (handleType=='edit'&&!activeHost.host_name_code)" label="唯一标识">
-                    <a-input placeholder="请输入唯一标识" v-decorator="['host_name_code', { rules: [{ required: true, message: '请输入唯一标识' },
-                    {pattern:/^[^\u4e00-\u9fa5]*$/,message:'唯一标识不能含有中文'}] }]"></a-input>
-                </a-form-item>
+        <a-modal width="1000px" :visible="visible" title="批量配置" @cancel="onClose" @ok="onSubmit" :confirmLoading="btnLoading">
+            <a-form :form="hostForm" :label-col="{ span: 2 }" :wrapper-col="{ span: 22 }">
 
                 <a-form-item label="系统类型">
                     <a-select @change="systemChange" placeholder="请选择系统类型" v-decorator="['system_type', { rules: [{ required: true, message: '请选择系统类型' }] }]">
@@ -21,17 +14,18 @@
                     <a-select placeholder="请选择协议类型" v-decorator="['protocol_type', { rules: [{ required: true, message: '请选择协议类型' }] }]">
                         <a-select-option value="SSH">SSH</a-select-option>
                         <a-select-option value="RDP">RDP</a-select-option>
-                        <!-- <a-select-option value="Telnet">Telnet</a-select-option>
-                        <a-select-option value="VNC">VNC</a-select-option> -->
+                    </a-select>
+                </a-form-item>
+                <a-form-item label="IP类型">
+                    <a-select placeholder="请选择IP类型" v-decorator="['ip_type', { rules: [{ required: true, message: '请选择IP类型' }] }]" style="width: 320px">
+                        <a-select-option v-for="(item, index) in ipTypeList" :key="index" :value="item.code">
+                            {{ item.name }}
+                        </a-select-option>
                     </a-select>
                 </a-form-item>
 
-                <a-form-item label="主机地址">
-                    <a-input placeholder="请输入有效的IP地址或域名" v-decorator="['host_address', { rules: [{ required: true, message: '请输入有效的IP地址或域名' }] }]"></a-input>
-                </a-form-item>
-
                 <a-form-item label="端口">
-                    <a-input-number style="width:838px;" :min="1" :max="65535" placeholder="请输入1~65535之间的有效数字" v-decorator="['port', { rules: [{ required: true, message: '请输入1~65535之间的有效数字' }] }]"></a-input-number>
+                    <a-input-number style="width:857px;" :min="1" :max="65535" placeholder="请输入1~65535之间的有效数字" v-decorator="['port', { rules: [{ required: true, message: '请输入1~65535之间的有效数字' }] }]"></a-input-number>
                 </a-form-item>
 
                 <a-form-item label="所属分组">
@@ -42,28 +36,12 @@
                     <a-textarea placeholder="请输入，最多输入200个汉字或字符" v-decorator="['description', { rules: [{ required: false},{max:200,message:'最多输入200个汉字或字符'}] }]"></a-textarea>
                 </a-form-item>
 
-                <a-form-item label="网络代理">
-                    <a-radio-group v-model="showNetwork">
-                        <a-radio :value="false">
-                            不使用代理
-                        </a-radio>
-                        <a-radio :value="true">
-                            使用代理
-                        </a-radio>
-                    </a-radio-group>
-                    <a-select v-decorator="['network_proxy', { rules: [{ required: false}] }]" v-if="showNetwork" placeholder="请选择网络代理">
-                        <a-select-option v-for="item in networkProxyList" :key="item.id">
-                            {{item.name}}
-                        </a-select-option>
-                    </a-select>
-                </a-form-item>
-
                 <a-form-item label="添加凭证">
                     <a-radio-group v-model="addMethodType" button-style="solid">
-                        <a-radio-button v-if="handleType=='add'" value="immediately">
+                        <a-radio-button value="immediately">
                             立即添加
                         </a-radio-button>
-                        <a-radio-button v-if="handleType=='add'" value="future">
+                        <a-radio-button value="future">
                             以后添加
                         </a-radio-button>
                         <a-radio-button value="have">
@@ -73,7 +51,7 @@
                 </a-form-item>
             </a-form>
 
-            <a-form v-if="addMethodType=='immediately'" :form="voucherForm" :label-col="{ span: 3 }" :wrapper-col="{ span: 21 }">
+            <a-form v-if="addMethodType=='immediately'" :form="voucherForm" :label-col="{ span: 2 }" :wrapper-col="{ span: 22 }">
                 <a-form-item label="登录方式">
                     <a-radio-group @change="loginTypeChange" v-decorator="['login_type', { initialValue: 'auto' ,rules: [{ required: true, message: '请选择登录方式' }] }]">
                         <a-radio value="auto">
@@ -96,42 +74,32 @@
                     <a-input placeholder="请输入凭证名称" v-decorator="['name', { rules: [{ required: true, message: '请输入凭证名称' }] }]"></a-input>
                 </a-form-item>
 
-                <a-form-item>
-                    <span slot="label">
-                        <span>资源账户</span>
-                        <a-tooltip title="资源账户是指操作系统登录账号">
-                            <a-icon style="margin:0 0 0 3px;color:#666" type="exclamation-circle" />
-                        </a-tooltip>
-                    </span>
-                    <a-input autocomplete="new-password" placeholder="请输入资源账户的名称" v-decorator="['login_name', { rules: [{ required:true, message: '请输入资源账户' },{pattern:/^[^\u4e00-\u9fa5]*$/,message:'资源账户不能含有中文'}] }]"></a-input>
+                <a-form-item label="资源账户">
+                    <a-input autoComplete="off" placeholder="请输入资源账户的名称" v-decorator="['login_name', { rules: [{ required:true, message: '请输入资源账户' }] }]"></a-input>
                 </a-form-item>
                 <div v-if="verificationMethod=='password'">
                     <template v-if="loginType=='auto'">
                         <a-form-item label="密码">
-                            <a-input-password autocomplete="new-password" placeholder="请输入密码" v-decorator="['login_password', { rules: [{ required: true, message: '请输入密码' },{pattern:/^[^\u4e00-\u9fa5]*$/,message:'密码不能含有中文'}] }]"></a-input-password>
+                            <a-input-password autoComplete="off" placeholder="请输入密码" v-decorator="['login_password', { rules: [{ required: true, message: '请输入密码' }] }]"></a-input-password>
                         </a-form-item>
                     </template>
                 </div>
-
                 <div v-else>
                     <a-form-item label="SSH key">
                         <a-textarea placeholder="请输入SSH key" :rows="4" v-decorator="['ssh_key', { rules: [{ required:true, message: '请输入SSH key' }] }]"></a-textarea>
                     </a-form-item>
-
                     <template v-if="loginType=='auto'">
                         <a-form-item label="Passphrase">
-                            <a-input-password placeholder="请输入Passphrase" v-decorator="['passphrase', { rules: [{ required: false, message: '请输入Passphrase' },{pattern:/^[^\u4e00-\u9fa5]*$/,message:'Passphrase不能含有中文'}] }]"></a-input-password>
+                            <a-input-password placeholder="请输入Passphrase" v-decorator="['passphrase', { rules: [{ required: false, message: '请输入Passphrase' }] }]"></a-input-password>
                         </a-form-item>
                     </template>
                 </div>
-
                 <a-form-item label="描述">
                     <a-textarea placeholder="请输入，最多输入200个汉字或字符" v-decorator="['description', { rules: [{ required: false},{max:200,message:'最多输入200个汉字或字符'}] }]"></a-textarea>
                 </a-form-item>
-
             </a-form>
 
-            <a-form v-if="addMethodType=='have'" :form="voucherForm" :label-col="{ span: 3 }" :wrapper-col="{ span: 21 }">
+            <a-form v-if="addMethodType=='have'" :form="voucherForm" :label-col="{ span: 2 }" :wrapper-col="{ span: 22 }">
                 <a-form-item label="添加凭证">
                     <a-radio-group v-model="credential_type">
                         <a-radio value="password">
@@ -145,33 +113,22 @@
                         </a-radio>
                     </a-radio-group>
                 </a-form-item>
-                <a-transfer :operations="operations" :titles="titles" :list-style="listStyle" style="margin:0 0 0 12.5%" @change="handleChange" :dataSource="mockData" :targetKeys="targetKeys" show-search :render="transferRender" />
+                <a-transfer :operations="operations" :titles="titles" :list-style="listStyle" style="margin:0 0 0 8.33%" @change="handleChange" :dataSource="mockData" :targetKeys="targetKeys" show-search :render="transferRender" />
             </a-form>
-
-            <footer>
-                <a-button @click="onClose">取消</a-button>
-                <a-button :loading="btnLoading" @click="onSubmit" style="margin:0 0 0 8px" type="primary">保存</a-button>
-            </footer>
-        </a-drawer>
+        </a-modal>
     </div>
 </template>
 
 <script>
-import { addHost, editHost } from "@/api/host"
+import { addHost, editHost, batchAddHosrFromCmdb } from "@/api/host"
 import { getGroup } from "@/api/group"
 import { getCredential } from "@/api/credential"
-import { getNetworkProxy } from "@/api/networkProxy"
 export default {
     data() {
         return {
-            title: "",
             visible: false,
             btnLoading: false,
             hostForm: this.$form.createForm(this, { name: "hostForm" }),
-            // 修改或新建
-            handleType: "",
-            // 选中的主机
-            activeHost: {},
             // 添加方式
             addMethodType: "immediately",
 
@@ -212,17 +169,19 @@ export default {
             groupList: [],
             //被选中的凭证分组(切换凭证类型时进行记录) 
             selectedgroupList: [],
-            // 是否使用网络代理
-            showNetwork: false,
-            // 网络代理选项
-            networkProxyList: [],
+            // 选中的主机key
+            selectedRowKeys: {},
+            ipList: [],
 
+            ipTypeList: [
+                { name: "内网IP", code: "内" },
+                { name: "外网IP", code: "外" },
+            ],
+            // 批量选中的数据
+            tableData: [],
         }
     },
-    props: ["fatherData"],
-    mounted() {
-        // this.getAllCredential()
-    },
+    props: ["fatherData", "fatherTableData"],
     watch: {
         // 凭证类型切换时，将选中的项记录，并更新数据
         credential_type: {
@@ -251,14 +210,6 @@ export default {
         }
     },
     methods: {
-        // 获取网络代理数据
-        getNetworkProxyList() {
-            getNetworkProxy({ all_data: 1 }).then(res => {
-                if (res.code == 200 && res.data) {
-                    this.networkProxyList = res.data
-                }
-            })
-        },
         // 穿梭框渲染
         transferRender(item) {
             let customLabel
@@ -303,6 +254,23 @@ export default {
                 label: customLabel,
                 value: item.title,
             };
+        },
+        onClose() {
+            this.visible = false
+            this.hostForm.resetFields()
+            this.targetKeys = []
+            this.voucherForm.resetFields()
+            this.selectedpasswordList = []
+            this.selectedsshList = []
+            this.selectedgroupList = []
+        },
+        // 穿梭框
+        handleChange(nextTargetKeys, direction, moveKeys) {
+            this.targetKeys = nextTargetKeys;
+        },
+        // 切换登录方式
+        loginTypeChange(val) {
+            this.loginType = val.target.value
         },
         // 获取所有凭据(password、ssh凭据分组)
         getAllCredential() {
@@ -352,10 +320,6 @@ export default {
                 }
             })
         },
-        // 穿梭框
-        handleChange(nextTargetKeys, direction, moveKeys) {
-            this.targetKeys = nextTargetKeys;
-        },
         // 选择系统自动填写协议类型和端口
         systemChange(val) {
             if (val == "Windows") {
@@ -363,12 +327,40 @@ export default {
                     protocol_type: "RDP",
                     port: 3389
                 })
-            } else {
+            } else if (val == "Linux") {
                 this.hostForm.setFieldsValue({
                     protocol_type: "SSH",
                     port: 22
                 })
             }
+        },
+
+        show(selectedRowKeys, selectGroupId) {
+            this.selectedRowKeys = selectedRowKeys
+            this.visible = true
+            this.credential_type = "password"
+            this.getAllCredential()
+            this.titles = this.titles1
+
+            this.loginType = "auto"
+            this.addMethodType = "immediately"
+
+            this.tableData = this.fatherTableData.filter(item => {
+                return selectedRowKeys.find(ele => {
+                    return ele == item.key
+                })
+            })
+
+            if (selectGroupId && selectGroupId != "all") {
+                this.$nextTick(function () {
+                    this.hostForm.setFieldsValue({ group: selectGroupId })
+                })
+            } else {
+                this.$nextTick(function () {
+                    this.hostForm.setFieldsValue({ group: 1 })
+                })
+            }
+
         },
         // 提交
         onSubmit() {
@@ -391,10 +383,25 @@ export default {
                 })
             })
 
+            let arr = []
+            this.tableData.map(item => {
+                let obj = { ...values1 }
+                if (values1.ip_type == "内") {
+                    obj.host_address = item.ip2
+                } else {
+                    obj.host_address = item.ip1
+                }
+                obj.host_name = item.show_name
+                obj.host_name_code = item.name
+                arr.push(obj)
+            })
+
             Promise.all([p1, p2]).then((result) => {
                 this.btnLoading = true
-                let updata = values1
-                updata.resource_from = "hand"
+                let updata = {
+                    import_type: "cmdb",
+                    data_list: arr
+                }
                 if (this.addMethodType == "immediately") {
                     updata.credential = values2
                     updata.credential.credential_type = this.verificationMethod
@@ -409,129 +416,28 @@ export default {
                     updata.credential_list = this.selectedpasswordList.concat(this.selectedsshList)
                     updata.credential_group_list = this.selectedgroupList
                 }
-
-                if (this.handleType == "add") {
-                    addHost(updata).then(res => {
-                        if (res.code == 200) {
-                            this.$message.success(res.message)
-                            this.onClose()
-                            this.$emit("father")
-                        }
-                    }).finally(() => {
-                        this.btnLoading = false
-                    })
-                } else {
-                    updata.id = this.activeHost.id
-                    if (!updata.host_name_code) {
-                        updata.host_name_code = this.activeHost.host_name_code
+                batchAddHosrFromCmdb(updata).then(res => {
+                    if (res.code == 200) {
+                        this.$message.success(res.message)
+                        this.onClose()
+                        this.$emit("father")
                     }
-                    editHost(updata).then(res => {
-                        if (res.code == 200) {
-                            this.$message.success(res.message)
-                            this.onClose()
-                            this.$emit("father")
-                        }
-                    }).finally(() => {
-                        this.btnLoading = false
-                    })
-                }
-            })
-        },
-        onClose() {
-            this.visible = false
-            this.hostForm.resetFields()
-            this.targetKeys = []
-            this.voucherForm.resetFields()
-            this.selectedpasswordList = []
-            this.selectedsshList = []
-            this.selectedgroupList = []
-            this.credential_type = "password"
-            this.showNetwork = false
-            this.verificationMethod = "password"
-        },
-        show(selectGroupId, record) {
-            this.visible = true
-            this.getAllCredential()
-            this.getNetworkProxyList()
-            this.titles = this.titles1
-            if (record) {
-                this.title = "修改主机"
-                this.activeHost = record
-                this.handleType = "edit"
-                this.addMethodType = "have"
-
-                let arr1 = [], arr2 = [], arr3 = []
-
-                if (record.credential.password_credential) {
-                    record.credential.password_credential.map(item => {
-                        arr1.push(item.id + "")
-                    })
-                }
-                this.selectedpasswordList = arr1
-                if (record.credential.ssh_credential) {
-                    record.credential.ssh_credential.map(item => {
-                        arr2.push(item.id + "")
-                    })
-                }
-                this.selectedsshList = arr2
-                if (record.credential.credential_group) {
-                    record.credential.credential_group.map(item => {
-                        arr3.push(item.id + "")
-                    })
-                }
-
-                this.selectedgroupList = arr3
-                this.targetKeys = this.selectedpasswordList
-                if (record.network_proxy?.id) {
-                    this.showNetwork = true
-                }
-                this.$nextTick(function () {
-                    this.hostForm.setFieldsValue({
-                        host_name: record.host_name,
-                        system_type: record.system_type,
-                        protocol_type: record.protocol_type,
-                        host_address: record.host_address,
-                        port: record.port,
-                        group: record.group.id,
-                        network_proxy: record.network_proxy?.id
-                    })
+                }).finally(() => {
+                    this.btnLoading = false
                 })
-            } else {
-                this.loginType = "auto"
-                this.addMethodType = "immediately"
-                this.title = "新建主机"
-                this.handleType = "add"
-                if (selectGroupId && selectGroupId != "all") {
-                    this.$nextTick(function () {
-                        this.hostForm.setFieldsValue({ group: selectGroupId })
-                    })
-                } else {
-                    this.$nextTick(function () {
-                        this.hostForm.setFieldsValue({ group: 1 })
-                    })
-                }
-            }
-        },
 
-
-        // 切换登录方式
-        loginTypeChange(val) {
-            this.loginType = val.target.value
+            })
         },
     }
 }
 </script>
-
 <style lang="less" scoped>
-footer {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    border-top: 1px solid #e9e9e9;
-    padding: 10px 16px;
-    background: #fff;
-    text-align: right;
-    z-index: 3;
+/deep/.ant-modal-body {
+    height: 680px;
+    overflow: scroll;
+    overflow-x: auto;
+}
+/deep/.ant-modal {
+    top: 30px;
 }
 </style>

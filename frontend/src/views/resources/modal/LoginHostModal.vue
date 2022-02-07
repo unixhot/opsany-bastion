@@ -17,9 +17,9 @@
                 </div>
                 <div class="header_right">
                     <strong>{{ hostInfo.host_name }}</strong>
-                    <div>主机地址：{{ hostInfo.host_address }}</div>
-                    <div>协议类型：{{ hostInfo.protocol_type }}</div>
-                    <div>端口：{{ hostInfo.port }}</div>
+                    <div>主机地址：{{ hostInfo.host_address || '-' }}</div>
+                    <div>协议类型：{{ hostInfo.protocol_type || '-' }}</div>
+                    <div>端口：{{ hostInfo.port || '-' }}</div>
                 </div>
             </div>
             <a-spin :spinning="infoLoading">
@@ -47,7 +47,7 @@
                         <a-form-model-item label="密码" v-if="isHand">
                             <a-input-password v-model="formData.password" placeholder="请输入密码"></a-input-password>
                         </a-form-model-item>
-                        <a-form-model-item label="字体大小" v-if="hostInfo.system_type == 'Linux'">
+                        <a-form-model-item label="字体大小" v-if="hostInfo.system_type != 'Windows'">
                             <a-input-number
                                 style="width: 100%"
                                 v-model="formData.font_size"
@@ -112,10 +112,12 @@ export default {
             isHand: false, //是否为手动登录
             screenArr, //分辨率列表
             localOpen: false, //是否为本地打开
+            linkType: 'host', //链接类型 host或者database
         }
     },
     methods: {
-        showModal(row, localOpen = false) {
+        showModal(row, localOpen = false, linkType = 'host') {
+            this.linkType = linkType
             this.localOpen = localOpen
             this.hostInfo = cloneDeep(row)
             this.formData = this.$options.data().formData
@@ -161,6 +163,7 @@ export default {
                             const query = {
                                 host_token: res.data,
                                 fontSize: this.formData.font_size,
+                                linkType: this.linkType,
                             }
                             if (routeName == 'webWindows') {
                                 delete query.fontSize
@@ -170,11 +173,13 @@ export default {
                             }
                             if (this.localOpen) {
                                 this.visible = false
-                                return this.$emit('getHostToken', query,this.hostInfo)
+                                return this.$emit('getHostToken', query, this.hostInfo)
                             }
                             const url = isDev
                                 ? `${window.location.origin}/#/console/${routeName}${stringifyUrl(query)}`
-                                : `${otherAppUrl}/bastion/#/console/${routeName}${stringifyUrl(query)}`
+                                : `${window.location.origin}${
+                                      window.location.pathname
+                                  }#/console/${routeName}${stringifyUrl(query)}`
                             window.open(url)
                             this.visible = false
                         })

@@ -27,7 +27,13 @@
                 </div>
                 <div>
                     <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                    <a-button v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_create" icon="plus" type="primary" @click="add">新建</a-button>
+                    <a-button
+                        v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_create"
+                        icon="plus"
+                        type="primary"
+                        @click="add"
+                        >新建</a-button
+                    >
                 </div>
             </div>
             <search-box :visible="visible" class="search_box">
@@ -59,7 +65,12 @@
                     <a :title="text" type="link" @click="viewDetail(row)">{{ text }}</a>
                 </template>
                 <template slot="status" slot-scope="text, row">
-                    <a-switch v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_on_off" v-model="row.status" @click="changeStatus(row)"></a-switch> {{ text ? '开启' : '关闭' }}
+                    <a-switch
+                        v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_on_off"
+                        v-model="row.status"
+                        @click="changeStatus(row)"
+                    ></a-switch>
+                    {{ text ? '开启' : '关闭' }}
                 </template>
                 <template slot="user" slot-scope="text, row">
                     {{ text.user.length }}/{{ text.user_group.length }}
@@ -71,8 +82,20 @@
                 </template>
                 <template slot="action" slot-scope="text, row">
                     <a-button type="link" size="small" @click="viewDetail(row)">查看</a-button>
-                    <a-button type="link" size="small" v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_update" @click="edit(row)">编辑</a-button>
-                    <a-button type="link" size="small" v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_delete" @click="del(row)">删除</a-button>
+                    <a-button
+                        type="link"
+                        size="small"
+                        v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_update"
+                        @click="edit(row)"
+                        >编辑</a-button
+                    >
+                    <a-button
+                        type="link"
+                        size="small"
+                        v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_delete"
+                        @click="del(row)"
+                        >删除</a-button
+                    >
                 </template>
             </a-table>
             <ControlVisitPolicy ref="ControlVisitPolicy" @done="getTableData"></ControlVisitPolicy>
@@ -82,6 +105,7 @@
 <script>
 import ControlVisitPolicy from './components/ControlVisitPolicy.vue'
 import { getAccessStrategy, delAccessStrategy, editAccessStrategyStatus } from '@/api/access-strategy'
+import { getPageAuth } from '@/utils/pageAuth'
 export default {
     components: { ControlVisitPolicy },
     data() {
@@ -183,8 +207,11 @@ export default {
                 })
         },
     },
-    mounted() {
-        this.getTableData()
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'use-access-credential')
+        if (hasAuth) {
+            this.getTableData()
+        }
     },
 }
 </script>

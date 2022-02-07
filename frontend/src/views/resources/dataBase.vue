@@ -1,9 +1,7 @@
 <template>
     <div>
         <ContentHeader>
-            <div slot="docs">
-                支持自定义主机分组，创建主机时可以直接创建和关联登录凭证，一个主机可以关联多个登录凭证。
-            </div>
+            <div slot="docs">数据库资源用于通过堡垒机直接登录数据库，目前支持MySQL、MongoDB、Redis。</div>
         </ContentHeader>
         <a-card>
             <div class="content">
@@ -18,33 +16,40 @@
                     >
                         <template slot="action" slot-scope="row">
                             <span :title="row.title" class="treetitle">{{ row.title }} ({{ row.count || 0 }})</span>
-                            <a-dropdown v-if="row.key != 1" class="dropdown" :trigger="['click']" @click.native.stop>
+                            <a-dropdown
+                                v-if="row.title != '默认分组'"
+                                class="dropdown"
+                                :trigger="['click']"
+                                @click.native.stop
+                            >
                                 <a-menu slot="overlay">
                                     <a-menu-item
-                                        @click="$refs.AddGroup.show(row, 'edit')"
-                                        key="1"
                                         v-if="
-                                            row.key != 'all' && $store.state.btnAuth.btnAuth.bastion_host_group_update
+                                            $store.state.btnAuth.btnAuth.bastion_database_group_update &&
+                                            row.key != 'all'
                                         "
+                                        @click="$refs.AddDataBaseGroup.show(row, 'edit')"
+                                        key="1"
                                     >
                                         <a-icon type="edit" />编辑
                                     </a-menu-item>
                                     <a-menu-item
-                                        @click="$refs.AddGroup.show(row, 'add')"
-                                        key="2"
                                         v-if="
-                                            (row.layer < 5 || row.key == 'all') &&
-                                            $store.state.btnAuth.btnAuth.bastion_host_group_create
+                                            $store.state.btnAuth.btnAuth.bastion_database_group_create &&
+                                            (row.layer < 5 || row.key == 'all')
                                         "
+                                        @click="$refs.AddDataBaseGroup.show(row, 'add')"
+                                        key="2"
                                     >
                                         <a-icon type="folder" />添加子文件夹
                                     </a-menu-item>
                                     <a-menu-item
+                                        v-if="
+                                            $store.state.btnAuth.btnAuth.bastion_database_group_delete &&
+                                            row.key != 'all'
+                                        "
                                         @click="deleteGroup(row)"
                                         key="3"
-                                        v-if="
-                                            row.key != 'all' && $store.state.btnAuth.btnAuth.bastion_host_group_delete
-                                        "
                                     >
                                         <a-icon type="delete" />删除
                                     </a-menu-item>
@@ -62,10 +67,10 @@
                                 v-model="pagination.search_data"
                                 @search="searchTable"
                                 placeholder="请输入关键字搜索"
-                                style="width: 300px"
+                                style="width: 320px"
                                 allowClear
                             >
-                                <a-select slot="addonBefore" style="width: 100px" v-model="pagination.search_type">
+                                <a-select slot="addonBefore" style="width: 120px" v-model="pagination.search_type">
                                     <a-select-option v-for="item in searchList" :key="item.key">{{
                                         item.name
                                     }}</a-select-option>
@@ -74,22 +79,9 @@
                         </div>
                         <div>
                             <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                            <!-- <a-dropdown style="margin: 0 10px 0 0">
-                                <a-menu slot="overlay">
-                                    <a-menu-item @click="$refs.AddFromCmdb.show(selectGroupId)" key="1">
-                                        资源平台导入
-                                    </a-menu-item>
-                                </a-menu>
-                                <a-button
-                                    v-if="$store.state.btnAuth.btnAuth.bastion_host_import"
-                                    style="margin-left: 8px"
-                                >
-                                    导入主机 <a-icon type="down" />
-                                </a-button>
-                            </a-dropdown> -->
                             <a-button
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_create"
-                                @click="$refs.AddHost.show(selectGroupId)"
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_create"
+                                @click="$refs.AddDataBase.show(selectGroupId)"
                                 type="primary"
                                 icon="plus"
                                 >新建</a-button
@@ -107,9 +99,14 @@
                     >
                         <template slot="name" slot-scope="text, record">
                             <a
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_details"
                                 :title="text"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                @click="
+                                    $router.push({
+                                        path: '/resources/dataBase/dataBaseDetails',
+                                        query: { id: record.id },
+                                    })
+                                "
                                 >{{ text }}</a
                             >
                             <span v-else>{{ text }}</span>
@@ -122,46 +119,56 @@
                         </template>
                         <template slot="voucher" slot-scope="text, record">
                             <a
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_details"
+                                @click="
+                                    $router.push({
+                                        path: '/resources/dataBase/dataBaseDetails',
+                                        query: { id: record.id },
+                                    })
+                                "
                                 >{{ text }}</a
                             >
                             <span v-else>{{ text }}</span>
                         </template>
                         <template slot="action" slot-scope="text, record">
                             <a-button
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_details"
                                 size="small"
                                 type="link"
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                @click="
+                                    $router.push({
+                                        path: '/resources/dataBase/dataBaseDetails',
+                                        query: { id: record.id },
+                                    })
+                                "
                                 >查看</a-button
                             >
                             <a-button
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_login"
                                 size="small"
                                 type="link"
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_login"
                                 @click="handleLogin(record)"
                                 >登录</a-button
                             >
                             <a-button
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_update"
                                 size="small"
                                 type="link"
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_update"
-                                @click="$refs.AddHost.show(selectGroupId, record)"
+                                @click="$refs.AddDataBase.show(selectGroupId, record)"
                                 >编辑</a-button
                             >
                             <a-button
+                                v-if="$store.state.btnAuth.btnAuth.bastion_database_delete"
                                 size="small"
                                 type="link"
-                                v-if="$store.state.btnAuth.btnAuth.bastion_host_delete"
-                                @click="deleteHost(record)"
+                                @click="deleteDataBase(record)"
                                 style="color: #333"
                                 >删除</a-button
                             >
                         </template>
                     </a-table>
                     <a-button
-                        v-if="tableData.length > 0"
+                        v-if="$store.state.btnAuth.btnAuth.bastion_database_delete && tableData.length > 0"
                         :disabled="selectedRowKeys.length == 0"
                         icon="delete"
                         @click="batchDelete"
@@ -171,60 +178,70 @@
                 </div>
             </div>
         </a-card>
-        <AddGroup @father="getHostGroupData" ref="AddGroup"></AddGroup>
-        <AddHost @father="getHostData(), getHostGroupData()" :fatherData.sync="fatherData" ref="AddHost"></AddHost>
-        <LoginHostModal ref="LoginHostModal"></LoginHostModal>
-        <AddFromCmdb
-            @father="getHostData(), getHostGroupData()"
+        <AddDataBaseGroup @father="getDataBaseGroupData" ref="AddDataBaseGroup"></AddDataBaseGroup>
+        <AddDataBase
+            @father="getDataBaseData(), getDataBaseGroupData()"
             :fatherData.sync="fatherData"
-            ref="AddFromCmdb"
-        ></AddFromCmdb>
+            ref="AddDataBase"
+        ></AddDataBase>
+        <LoginHostModal ref="LoginHostModal"></LoginHostModal>
     </div>
 </template>
 
 <script>
+import { getDataBase, delDataBase, getDataBaseGroup, delDataBaseGroup } from '@/api/dataBase'
 import ContentHeader from '@/views/components/ContentHeader'
-import AddHost from './modal/addHost.vue'
+import AddDataBaseGroup from './modal/addDataBaseGroup.vue'
+import AddDataBase from './modal/addDataBase.vue'
 import LoginHostModal from './modal/LoginHostModal.vue'
-import { getHost, delHost, getHostGroup, delHostGroup } from '@/api/host'
-import AddGroup from './modal/addGroup.vue'
-import AddFromCmdb from './modal/addFromCmdb.vue'
-import { getPageAuth } from '@/utils/pageAuth'
+
 export default {
     data() {
         return {
+            showTree: true,
+            selectedKeys: ['all'],
             // 分组数据(左侧树)
             treeData: [
                 {
                     key: 'all',
-                    title: '全部主机',
+                    title: '全部数据库',
                     scopedSlots: { title: 'action' },
                     children: [],
                 },
             ],
+            pagination: {
+                total: 0,
+                current: 1,
+                pageSize: 10,
+                showTotal: (total) => `共有 ${total} 条数据`,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                search_type: 'host_name',
+                search_data: undefined,
+            },
             searchList: [
-                { name: '主机名称', key: 'host_name' },
-                { name: '主机地址', key: 'host_address' },
-                { name: '系统类型', key: 'system_type' },
+                { name: '数据库名称', key: 'host_name' },
+                { name: '连接地址', key: 'host_address' },
+                { name: '数据库类型', key: 'database_type' },
             ],
             selectedRowKeys: [],
             tableData: [],
             columns: [
                 {
-                    title: '主机名称',
+                    title: '数据库名称',
                     dataIndex: 'host_name',
                     ellipsis: true,
                     scopedSlots: { customRender: 'name' },
-                    width: 200,
+                    width: 220,
                 },
                 {
-                    title: '主机地址',
+                    title: '连接地址',
                     dataIndex: 'host_address',
                     ellipsis: true,
                 },
                 {
-                    title: '系统类型',
-                    dataIndex: 'system_type',
+                    title: '数据库类型',
+                    dataIndex: 'database_type',
                     ellipsis: true,
                 },
                 {
@@ -246,48 +263,23 @@ export default {
                     align: 'center',
                 },
             ],
-            showTree: false,
-            // 分组数据(传给子组件)
-            fatherData: [],
             tableLoading: false,
-            pagination: {
-                total: 0,
-                current: 1,
-                pageSize: 10,
-                showTotal: (total) => `共有 ${total} 条数据`,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                search_type: 'host_name',
-                search_data: undefined,
-            },
             // 选中的分组id
             selectGroupId: undefined,
-            // 树选中的项
-            selectedKeys: ['all'],
+            // 分组数据(传给子组件)
+            fatherData: [],
         }
     },
-    async mounted() {
-        const hasAuth = await getPageAuth(this, 'visit-host-resources')
-        if (hasAuth) {
-            this.getHostData()
-            this.getHostGroupData()
-        }
+    mounted() {
+        this.getDataBaseData()
+        this.getDataBaseGroupData()
     },
     methods: {
-        // 删除
-        deleteHost(record) {
-            let _this = this
-            this.$confirm({
-                title: '确认删除该主机吗？',
-                onOk: function () {
-                    delHost({ id: record.id }).then((res) => {
-                        if (res.code == 200) {
-                            _this.$message.success(res.message)
-                            _this.getHostData()
-                        }
-                    })
-                },
-            })
+        // 搜索
+        searchTable(val) {
+            this.search_data = val
+            this.pagination.current = 1
+            this.getDataBaseData()
         },
         // 批量删除
         batchDelete() {
@@ -295,36 +287,33 @@ export default {
             this.$confirm({
                 title: '确认删除吗？',
                 onOk: function () {
-                    delHost({ id_list: _this.selectedRowKeys }).then((res) => {
+                    delDataBase({ id_list: _this.selectedRowKeys }).then((res) => {
                         if (res.code == 200) {
                             _this.$message.success(res.message)
-                            _this.getHostData()
+                            _this.getDataBaseData()
                             _this.selectedRowKeys = []
                         }
                     })
                 },
             })
         },
-        // 选中分组(树)
-        treeSelect(val) {
-            this.selectGroupId = val[0]
-            this.selectedKeys = val
-            this.pagination.current = 1
-            this.getHostData()
+        // 删除
+        deleteDataBase(record) {
+            let _this = this
+            this.$confirm({
+                title: '确认删除该主机吗？',
+                onOk: function () {
+                    delDataBase({ id: record.id }).then((res) => {
+                        if (res.code == 200) {
+                            _this.$message.success(res.message)
+                            _this.getDataBaseData()
+                        }
+                    })
+                },
+            })
         },
-        // 换页
-        onChange(val) {
-            this.pagination.total = val.total
-            this.pagination.current = val.current
-            this.pagination.pageSize = val.pageSize
-            this.getHostData()
-        },
-        // table选择
-        onSelectChange(selectedRowKeys) {
-            this.selectedRowKeys = selectedRowKeys
-        },
-        // 获取主机数据
-        getHostData() {
+        // 获取数据库数据
+        getDataBaseData() {
             this.tableLoading = true
             let updata = {
                 current: this.pagination.current,
@@ -337,7 +326,7 @@ export default {
             if (this.selectGroupId != 'all') {
                 updata.group_id = this.selectGroupId
             }
-            getHost(updata)
+            getDataBase(updata)
                 .then((res) => {
                     if (res.code == 200 && res.data) {
                         this.pagination.total = res.data.total
@@ -361,44 +350,48 @@ export default {
                     this.tableLoading = false
                 })
         },
-        // 搜索
-        searchTable(val) {
-            this.search_data = val
-            this.pagination.current = 1
-            this.getHostData()
-        },
-        // 刷新
-        refresh() {
-            this.pagination = this.$options.data().pagination
-            this.getHostData()
-        },
         // 获取分组数据(树)
-        getHostGroupData() {
+        getDataBaseGroupData() {
             this.showTree = false
-            getHostGroup().then((res) => {
-                if (res.code == 200 && res.data) {
-                    organizeTree(res.data, 2)
-                    this.treeData[0].children = res.data
-                    this.fatherData = res.data
-                }
+            let allNumber = 0
+            getDataBaseGroup()
+                .then((res) => {
+                    if (res.code == 200 && res.data) {
+                        organizeTree(res.data, 2)
+                        this.treeData[0].children = res.data
+                        this.treeData[0].children.map((item) => {
+                            allNumber += item.count
+                        })
+                        this.treeData[0].count = allNumber
+                        this.fatherData = res.data
+                        this.showTree = true
+                    }
 
-                function organizeTree(treedata, layer) {
-                    treedata.map((item) => {
-                        item.key = item.id
-                        item.title = item.name
-                        item.scopedSlots = { title: 'action' }
-                        item.layer = layer
+                    function organizeTree(treedata, layer) {
+                        treedata.map((item) => {
+                            item.key = item.id
+                            item.title = item.name
+                            item.scopedSlots = { title: 'action' }
+                            item.layer = layer
 
-                        item.value = item.id
+                            item.value = item.id
 
-                        if (item.children && item.children.length > 0) {
-                            organizeTree(item.children, layer + 1)
-                        }
-                    })
-                }
-            }).finally(()=>{
-				this.showTree = true
-			})
+                            if (item.children && item.children.length > 0) {
+                                organizeTree(item.children, layer + 1)
+                            }
+                        })
+                    }
+                })
+                .finally(() => {
+                    this.showTree = true
+                })
+        },
+        // 选中分组(树)
+        treeSelect(val) {
+            this.selectGroupId = val[0]
+            this.selectedKeys = val
+            this.pagination.current = 1
+            this.getDataBaseData()
         },
         // 删除分组
         deleteGroup(row) {
@@ -406,37 +399,58 @@ export default {
             this.$confirm({
                 title: '确认删除该分组吗?',
                 onOk: function () {
-                    delHostGroup({ id: row.id }).then((res) => {
-                        if (res.code == 200) {
-                            _this.$message.success(res.message)
-                            if (row.id == _this.selectGroupId) {
-                                _this.selectedKeys = ['all']
-                                _this.selectGroupId = 'all'
-                            }
-                            _this.getHostGroupData()
-                            _this.getHostData()
-                        } else {
-                            _this.$message.error(res.message)
-                        }
+                    return new Promise((resolve, reject) => {
+                        delDataBaseGroup({ id: row.id })
+                            .then((res) => {
+                                if (res.code == 200) {
+                                    _this.$message.success(res.message)
+                                    if (row.id == _this.selectGroupId) {
+                                        _this.selectedKeys = ['all']
+                                        _this.selectGroupId = 'all'
+                                    }
+                                    _this.getDataBaseGroupData()
+                                    _this.getDataBaseData()
+                                    resolve()
+                                } else {
+                                    _this.$message.error(res.message)
+                                    reject()
+                                }
+                            })
+                            .catch((res) => {
+                                reject()
+                            })
                     })
                 },
             })
         },
-        //登录弹窗
+        // 刷新
+        refresh() {
+            this.pagination = this.$options.data().pagination
+            this.getDataBaseData()
+        },
+        // table选择
+        onSelectChange(selectedRowKeys) {
+            this.selectedRowKeys = selectedRowKeys
+        },
+        // 换页
+        onChange(val) {
+            this.pagination.total = val.total
+            this.pagination.current = val.current
+            this.pagination.pageSize = val.pageSize
+            this.getDataBaseData()
+        },
         handleLogin(row) {
-            this.$refs.LoginHostModal.showModal(row)
+            this.$refs.LoginHostModal.showModal(row, false, 'dataBase')
         },
     },
     components: {
         ContentHeader,
-        AddHost,
-        AddGroup,
+        AddDataBaseGroup,
+        AddDataBase,
         LoginHostModal,
-        AddFromCmdb,
     },
 }
 </script>
-
 <style lang="less" scoped>
 .content {
     display: flex;

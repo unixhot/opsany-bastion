@@ -3,16 +3,16 @@
         <div class="boxhelp">
             <div>
                 <div class="allowBox"></div>
-                <div>允许</div>
+                <div>{{ allowText }}</div>
             </div>
             <div>
                 <div class="disabledBox" :style="{ background: disabledColor }"></div>
-                <div>禁止</div>
+                <div>{{ disabledText }}</div>
             </div>
         </div>
 
         <div v-for="week in weekList" class="container">
-            <span class="week_name">{{ week.name }}</span>
+            <span class="week_name" @click="clickWeek(week)">{{ week.name }}</span>
             <span
                 v-for="(time, timeIndex) in 24"
                 class="timebox"
@@ -27,7 +27,7 @@
             </a-select>
         </div>
         <div class="timecountbox">
-            <span v-for="(time, timeIndex) in 24" class="timecount">
+            <span v-for="(time, timeIndex) in 24" class="timecount" @click="clickTime(timeIndex)">
                 {{ timeIndex }}
             </span>
         </div>
@@ -48,6 +48,14 @@ export default {
         disabledColor: {
             type: String,
             default: '#ffffff',
+        },
+        allowText: {
+            type: String,
+            default: '允许',
+        },
+        disabledText: {
+            type: String,
+            default: '禁止',
         },
     },
     model: {
@@ -70,6 +78,32 @@ export default {
                 } else item.activeTime = Array.from({ length: 24 }, (item, index) => index)
             })
             this.emitWeekList()
+        },
+        clickWeek(week) {
+            const activeTime = week.activeTime.length == 24 ? [] : Array.from({ length: 24 }, (item, index) => index)
+            this.$set(week, 'activeTime', activeTime)
+            this.emitWeekList()
+        },
+        clickTime(timeIndex) {
+            const alreadyCheckTime = this.weekList
+                .map((item) => {
+                    return item.activeTime.find((it) => it == timeIndex)
+                })
+                .filter((item) => item != undefined)
+            const isCheckAllTime = alreadyCheckTime.length == this.weekList.length
+            if (isCheckAllTime) {
+                this.weekList.forEach((item) => {
+                    const index = item.activeTime.findIndex((it) => it == timeIndex)
+                    item.activeTime.splice(index, 1)
+                })
+                this.emitWeekList()
+            } else {
+                this.weekList.forEach((item) => {
+                    !item.activeTime.includes(timeIndex) && item.activeTime.push(timeIndex)
+                    item.activeTime.sort((a, b) => a - b)
+                })
+                this.emitWeekList()
+            }
         },
         emitWeekList() {
             const weekList = this.weekList.map((item) => {
@@ -141,6 +175,7 @@ export default {
         display: inline-block;
         width: 30px;
         margin-right: 5px;
+        cursor: pointer;
     }
     .timebox {
         width: 20px;
@@ -163,6 +198,7 @@ export default {
         height: 20px;
         margin-left: 1px;
         text-align: center;
+        cursor: pointer;
     }
 }
 </style>
