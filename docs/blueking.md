@@ -1,7 +1,7 @@
 # 生产环境部署
 
-- 方案一： 直接部署OpsAny社区版(官方文档)[https://docs.opsany.com/]
-- 方案二： 在蓝鲸社区版的基础上快速部署OpsAny堡垒机
+- 方案一： 直接部署OpsAny社区版(官方文档)[https://docs.opsany.com/]【适合所有用户】
+- 方案二： 在蓝鲸社区版的基础上快速部署OpsAny堡垒机【适合对于腾讯蓝鲸特别熟悉的用户】
 
 ## 方案二：蓝鲸社区版部署OpsAny开源堡垒机
 
@@ -57,7 +57,7 @@ cd /opt/opsany-bastion && bash /tmp/build.sh -s ./ -d /tmp/release --python3-hom
 3. 部署完毕之后，点击opsany-bastion应用名称，进入到应用详情，点击环境变量，请根据实际情况修改下面的值。
 
 ```
-#自定义修改配置文件
+#自定义修改后执行
 MYSQL_PASSWORD=上面获取到的MySQL密码
 MYSQL_HOST=mysql-default.service.consul
 MYSQL_PORT=3306
@@ -73,17 +73,18 @@ REDIS_PASSWORD=上面获取到的Redis密码
 - 设置环境变量
 
 ```
-export BK_IAM_V3_INNER_HOST=bkiam.service.consul:5001
-export APP_ID=opsany-bastion
-export APP_TOKEN=b7d83351-0f0a-4918-adaa-a4860bc2fced
-export BK_PAAS_HOST=https://ce.bktencent.com
+#自定义修改后执行
+export BK_IAM_V3_INNER_HOST=http://bkiam.service.consul:5001   #请修改为正确配置，这个是默认值。
+export APP_ID=opsany-bastion #请不要修改此配置，APP_ID是固定的，不允许修改。
+export APP_TOKEN=b7d83351-0f0a-4918-adaa-a4860bc2fced #请修改为正确的配置,可以在开发中心，S-Mart应用，查看opsany-bastion详情可以获取到。
+export BK_PAAS_HOST=https://ce.bktencent.com #请修改为正确的配置，你当前部署的蓝鲸的访问地址。
 ```
 
 - 执行脚本进行初始化
 ```
 cd /opt/opsany-bastion/install/init_iam
-python init_iam_system.py
-python init_action.py
+python3 init_iam_system.py
+python3 init_action.py
 ```
 
 > 如何可以正常打开所有的堡垒机页面，就证明部署正常，接下来需要部署底层的Websocket服务，用于Web SSH。
@@ -158,6 +159,7 @@ docker run -d --restart=always --name opsany-bk-websocket \
     -v ${INSTALL_PATH}/conf/settings_production.py.websocket:/opt/opsany/websocket/config/prod.py \
     -v ${INSTALL_PATH}/conf/settings_production.py.websocket.init:/opt/opsany/websocket/config/__init__.py \
     -v /etc/localtime:/etc/localtime:ro \
+    -v /usr/share/zoneinfo:/usr/share/zoneinfo \
     ${PAAS_DOCKER_REG}/opsany-bk-websocket:v1.2.1
 ```
 
