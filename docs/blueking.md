@@ -45,7 +45,7 @@ wget -c http://bkopen-1252002024.file.myqcloud.com/common/py36_e.tgz -O /opt/py.
 wget -c https://raw.githubusercontent.com/shpdnkti/saas-builder/main/build.sh -O /tmp/build.sh
 tar xf /opt/py.tgz -C /opt
 chmod +x /tmp/build.sh
-bash /tmp/build.sh -s ./opsany-bastion -d /tmp/release --python3-home /opt/py36_e/bin/python3 --app-code opsany-bastion --app-version 1.2.1
+cd /opt/opsany-bastion && bash /tmp/build.sh -s ./ -d /tmp/release --python3-home /opt/py36_e/bin/python3 --app-code opsany-bastion --app-version 1.2.1
 ```
 
 将打包后的文件下载到本地。
