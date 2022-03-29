@@ -347,6 +347,7 @@ class ImportHostComponent:
                 "protocol_type": form.cleaned_data["protocol_type"],
                 "host_address": form.cleaned_data["host_address"],
                 "resource_from": form.cleaned_data["resource_from"],
+                "network_proxy": form.cleaned_data["network_proxy"],
                 "port": form.cleaned_data["port"],
                 "description": form.cleaned_data["description"],
                 "group_id": form.cleaned_data["group"],

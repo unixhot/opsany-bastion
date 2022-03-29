@@ -27,6 +27,7 @@
                 :pagination="{
                     ...tableQuery,
                     showTotal: (total) => `共 ${total} 条数据`,
+                    showSizeChanger: true,
                     showQuickJumper: true,
                 }"
                 @change="tableChange"
@@ -40,7 +41,7 @@
                 :disabled="!tableData.length"
                 @click="checkAll"
                 style="float: left; margin: -50px 10px 0 0"
-                >批量全选</a-button
+                >全部全选</a-button
             >
         </a-modal>
     </div>
@@ -52,9 +53,9 @@ export default {
         return {
             tableQuery: {
                 current: 1,
-                pageSize: 99999,
+                pageSize: 10,
                 total: 0,
-                data_type: 'list',
+                data_type: 'all',
                 search_data: undefined,
                 search_type: 'username',
             },
@@ -107,7 +108,7 @@ export default {
     methods: {
         showModal() {
             this.visible = true
-			this.tableQuery = this.$options.data().tableQuery
+            this.tableQuery = this.$options.data().tableQuery
             this.getTableData()
         },
         getTableData() {
@@ -115,20 +116,15 @@ export default {
             this.selectedRowKeys = []
             getUserAdmin({ ...this.tableQuery })
                 .then((res) => {
-                    const {
-                        data: { data, current, total },
-                    } = res
-                    this.tableData = data
-                    this.tableQuery.current = current
-                    this.tableQuery.total = total
-                    if (this.tableQuery.total > 0 && this.tableQuery.current > 1 && this.tableData.length == 0) {
-                        this.tableQuery.current--
-                        this.getTableData()
-                    }
+                    this.tableData = res.data
                 })
                 .finally(() => {
                     this.tableLoading = false
                 })
+        },
+        tableChange({ current, pageSize }) {
+            this.tableQuery.current = current
+            this.tableQuery.pageSize = pageSize
         },
         searchTable() {
             this.tableQuery.current = 1
@@ -141,10 +137,6 @@ export default {
         },
         onSelectChange(selectedRowKeys) {
             this.selectedRowKeys = selectedRowKeys
-        },
-        tableChange({ current, pageSize }) {
-            this.tableQuery.current = current
-            this.tableQuery.pageSize = pageSize
         },
         checkAll() {
             if (this.selectedRowKeys.length == this.tableData.length) {

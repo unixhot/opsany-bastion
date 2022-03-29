@@ -664,7 +664,21 @@ class BkUserAdminView(View):
             return self.get_list(request)
         if data.get("data_type", "") == "import":       # 获取导入列表
             return self.get_import_list(request)
+        if data.get("data_type", "") == "all":
+            return self.get_all_list(request)
         return JsonResponse(error(ErrorStatusCode.INPUT_ERROR, custom_message="请输入正确的内容"))
+
+    def get_all_list(self, request):
+        data = request.GET.dict()
+        search_type = data.get("search_type", "")
+        search_data = data.get("search_data", None)
+        filter_dict = {}
+        if search_data and search_type:
+            filter_dict[search_type + "__contains"] = search_data
+        query_set = UserInfo.fetch_all(**filter_dict)
+        return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, [
+            query.to_dict() for query in query_set
+        ]))
 
     def get_list(self, request):
         data = request.GET.dict()
@@ -722,22 +736,49 @@ class BkUserAdminView(View):
 
     def post(self, request):
         data = json.loads(request.body)
-        username = data.get("username")
+        import_type = data.get("import_type", "")
+        if import_type == "all":
+            self.import_all_user(request)
+            return JsonResponse(success(SuccessStatusCode.OPERATION_SUCCESS))
+        username_list = data.get("username_list")
         token = request.COOKIES.get("bk_token")
         esb = EsbApi(token)
-        res = esb.retrieve_user(username)
-        if res:
-            user = UserInfo.fetch_one(username=res.get("username"))
-            if not user:
+        for username in username_list:
+            res = esb.retrieve_user(username)
+            if res:
+                user = UserInfo.fetch_one(username=res.get("username"))
+                if not user:
+                    UserInfo.create(**{
+                        "username": res.get("username"),
+                        "ch_name": res.get("display_name"),
+                        "email": res.get("email"),
+                        "phone": res.get("telephone"),
+                        "role": res.get("role")
+                    })
+        return JsonResponse(success(SuccessStatusCode.OPERATION_SUCCESS))
+
+    def import_all_user(self, request):
+        esb = EsbApi(request.COOKIES.get("bk_token"))
+        page = 0
+        all_user = []
+        while True:
+            page += 1
+            res = esb.list_users(page, 100)
+            if res:
+                all_user.extend(res.get("results"))
+            else:
+                break
+        handle_user_list = self.handle_results(all_user)
+        for user in handle_user_list:
+            if not user.get("is_import"):
+                user_info = esb.retrieve_user(user.get("username"))
                 UserInfo.create(**{
-                    "username": res.get("username"),
-                    "ch_name": res.get("display_name"),
-                    "email": res.get("email"),
-                    "phone": res.get("telephone"),
-                    "role": res.get("role")
+                    "phone": user_info.get("telephone", ""),
+                    "username": user_info.get("username"),
+                    "email": user_info.get("email", ""),
+                    "ch_name": user_info.get("display_name", ""),
+                    "role": user_info.get("role", 0)
                 })
-                return JsonResponse(success(SuccessStatusCode.OPERATION_SUCCESS))
-        return JsonResponse(error(ErrorStatusCode.INPUT_ERROR))
 
     def delete(self, request):
         data = json.loads(request.body)

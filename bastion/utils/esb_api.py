@@ -402,8 +402,3 @@ class EsbApi(object):
             return end_data.get("data")
         return {}
 
-
-if __name__ == '__main__':
-    esb = EsbApi("0LzaWKOlypDory8Zzw7UU3JMTU0safl7gvdAnKd1IfE")
-    print(esb.get_user_info_from_workbench_or_login())
-

@@ -1,4 +1,4 @@
-app_code: bastion
+app_code: opsany-bastion
 app_name: 堡垒机
 secret_key: a0483726-f73e-11eb-bafb-00163e105ceb
 author: OpsAny
@@ -50,20 +50,10 @@ libraries:
   version: 3.2.1
 - name: paramiko
   version: 2.7.2
-- name: channels
-  version: 2.1.4
-- name: channels-redis
-  version: 2.3.1
-- name: daphne
-  version: 2.2.1
 - name: django_redis
   version: 4.11.0
-- name: gunicorn
-  version: 19.9.0
 - name: bk-iam
   version: 1.1.20
-- name: gevent
-  version: 21.1.2
 - name: XlsxWriter
   version: 1.2.8
 - name: xlrd

@@ -5,7 +5,8 @@ from bastion.utils.init_action_v2 import add_action_to_system
 
 
 def run_init(apps, schema_editor):
-    add_action_to_system()
+    # add_action_to_system()
+    pass
 
 
 class Migration(migrations.Migration):

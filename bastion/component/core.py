@@ -362,7 +362,7 @@ class CheckUserHostComponent:
         ls && rm
         """
         command_list = [command]
-        flag_list = ["|", "&", ";"]
+        flag_list = ["|", "&", ";", " "]
 
         def get_status(flag_list, command):
             for flag in flag_list:

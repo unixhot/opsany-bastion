@@ -4115,10 +4115,10 @@
   "resolved" "https://registry.npm.taobao.org/de-indent/download/de-indent-1.0.2.tgz"
   "version" "1.0.2"
 
-"deasync@^0.1.15":
-  "integrity" "sha1-VG/SZgaIoe7tVe3OIwjFz3EE+do="
-  "resolved" "https://registry.npm.taobao.org/deasync/download/deasync-0.1.20.tgz"
-  "version" "0.1.20"
+"deasync@^0.1.15", "deasync@^0.1.24":
+  "integrity" "sha512-i98vg42xNfRZCymummMAN0rIcQ1gZFinSe3btvPIvy6JFTaeHcumeKybRo2HTv86nasfmT0nEgAn2ggLZhOCVA=="
+  "resolved" "https://registry.npmmirror.com/deasync/-/deasync-0.1.24.tgz"
+  "version" "0.1.24"
   dependencies:
     "bindings" "^1.5.0"
     "node-addon-api" "^1.7.1"

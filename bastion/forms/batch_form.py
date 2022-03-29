@@ -1,6 +1,6 @@
 from django import forms
 
-from bastion.models import HostModel, HostGroupModel
+from bastion.models import HostModel, HostGroupModel, NetworkProxyModel
 from bastion.utils.constants import IP_PATTERN
 
 
@@ -13,6 +13,7 @@ class ResourceBaseForm(forms.Form):
     resource_from = forms.CharField(max_length=30, required=False)
     port = forms.CharField()
     description = forms.CharField(max_length=3000, required=False)
+    network_proxy = forms.Field(required=False)
 
     def clean_port(self):
         port = self.cleaned_data.get('port', "")
@@ -39,6 +40,17 @@ class ResourceBaseForm(forms.Form):
         if not IP_PATTERN.match(host_address):
             self.add_error('host_address', 'IP地址错误')
         return host_address
+
+    def clean_network_proxy(self):
+        network_proxy = self.cleaned_data.get('network_proxy')
+        if network_proxy:
+            network_proxy_query = NetworkProxyModel.fetch_one(id=network_proxy)
+            if not network_proxy_query:
+                return self.add_error("network_proxy", "网络代理不存在")
+            self.cleaned_data["network_proxy"] = network_proxy_query
+            return network_proxy_query
+        return network_proxy
+
 
 
 # 主机资源表单校验

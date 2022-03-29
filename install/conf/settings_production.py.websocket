@@ -36,15 +36,15 @@ DATABASES.update(
             'ENGINE': 'django.db.backends.mysql',
             'NAME': 'bastion',  # 数据库名
             'USER': 'bastion',  # 数据库用户
-            'PASSWORD': os.getenv("MYSQL_PASSWORD", "MYSQL_OPSANY_PASSWORD"),  # 数据库密码
-            'HOST': os.getenv("MYSQL_HOST", "MYSQL_SERVER_IP"),  # 数据库主机
-            'PORT': int(os.getenv("MYSQL_PORT", "3306")),  # 数据库端口
+            'PASSWORD': os.getenv("MYSQL_PASSWORD", "MYSQL_BASTION_PASSWORD"),  # 数据库密码
+            'HOST': os.getenv("MYSQL_HOST", "MYSQL_SERVER_HOST"),  # 数据库主机
+            'PORT': int(os.getenv("MYSQL_PORT", "MYSQL_SERVER_PORT")),  # 数据库端口
         },
     }
 )
 
-REDIS_HOST = os.getenv("REDIS_HOST", "REDIS_SERVER_IP")
-REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_HOST = os.getenv("REDIS_HOST", "REDIS_SERVER_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT", "REDIS_SERVER_PORT")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "REDIS_SERVER_PASSWORD")
 
 CACHES.update(

@@ -15,7 +15,7 @@ from blueapps.core.celery import celery_app
 # SaaS运行版本，如非必要请勿修改
 RUN_VER = 'open'
 # SaaS应用ID
-APP_CODE = 'bastion'
+APP_CODE = 'opsany-bastion'
 # SaaS安全密钥，注意请勿泄露该密钥
 SECRET_KEY = os.getenv("APP_TOKEN", '73a828d2-0cc1-11ec-bea7-00163e105ceb')
 # PAAS平台URL

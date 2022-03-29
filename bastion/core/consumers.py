@@ -53,6 +53,7 @@ class WebSSH(WebsocketConsumer):
     user = None
     cache = get_redis_connection("cache")
     token = ""
+    link_config = {}
     host = None
     session_log = None
 
@@ -92,9 +93,12 @@ class WebSSH(WebsocketConsumer):
 
     def get_link_config(self, token):
         try:
-            data = self.cache.get(token).decode("utf-8")
-            data = eval(data)
-            return True, data
+            if not self.link_config:
+                data = self.cache.get(token).decode("utf-8")
+                self.link_config = eval(data)
+            else:
+                pass
+            return True, self.link_config
         except Exception as e:
             app_logging.error("[ERROR] SSH web socket, get_link_config error: {}, param: {}".format(
                     str(e), str(token))
@@ -116,7 +120,7 @@ class WebSSH(WebsocketConsumer):
         status, _ = CheckUserHostComponent().check_access_strategy(access_data, access_ip)
         return status
 
-    def check_token(self):
+    def check_token(self, check_user=False):
         request_param = self.get_request_param_dict()
         if not self.token:
             if request_param.get("token"):
@@ -125,7 +129,10 @@ class WebSSH(WebsocketConsumer):
                 self.token = self.get_cookie().get("link_token")
         status, data = self.get_link_config(self.token)
         if status:
-            status = self.check_link_user(data.get("user_id"))
+            if not check_user:
+                status = self.check_link_user(data.get("user_id"))
+            else:
+                status = True
             if status:
                 if data.get("admin") or data.get("cache"):
                     return None, "", data
@@ -372,7 +379,10 @@ class WebSSH(WebsocketConsumer):
             })
         except Exception as e:
             app_logging.error("[ERROR] Update Session Log error: {}, param: {}".format(str(e), str(self.session_log)))
-        self.close()
+        try:
+            self.close()
+        except:
+            pass
 
     def close_ssh(self):
         self.queue.publish(self.channel_name, json.dumps(['close']))
@@ -384,7 +394,7 @@ class WebSSH(WebsocketConsumer):
         return queue
 
     def receive(self, text_data=None, bytes_data=None, **kwargs):
-        status, code, data = self.check_token()
+        status, code, data = self.check_token(check_user=True)
         if not status and status is not None:
             self.close_connect(code)
         try:
@@ -635,9 +645,15 @@ class GuacamoleWebsocket(WebsocketConsumer):
             os.system(command)
         else:
             app_logging.error("[ERROR] Windows Terminal Not Find Session Log, Channel name: {}".format(self.channel_name))
-        self.close()
+        try:
+            self.close()
+        except:
+            pass
         self.GUACD_CLIENT.client.close()
-        self.close()
+        try:
+            self.close()
+        except:
+            pass
         self.closeguacamole()
 
     def queue(self):

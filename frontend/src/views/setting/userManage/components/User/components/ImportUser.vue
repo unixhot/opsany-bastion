@@ -39,6 +39,15 @@
                             showTotal: (total) => `共 ${total} 条数据`,
                             showQuickJumper: true,
                         }"
+                        :row-selection="{
+                            selectedRowKeys: selectedRowKeys,
+                            onChange: onSelectChange,
+                            getCheckboxProps: (row) => ({
+                                props: {
+                                    disabled: row.is_import,
+                                },
+                            }),
+                        }"
                         @change="tableChange"
                         :rowKey="(item) => item.username"
                         :loading="treeLoading"
@@ -54,7 +63,6 @@
                             >
                         </template>
                     </a-table>
-                    <!-- :row-selection="{ selectedRowKeys, onChange: onSelectChange }" -->
                     <!-- <a-button
                         v-if="!!tableData.length"
                         :disabled="!tableData.length"
@@ -66,8 +74,19 @@
             </div>
 
             <div class="bottom_btns">
+                <a-tooltip placement="topLeft" v-if="!!tableData.length" :style="{ marginRight: '8px' }">
+                    <template slot="title">
+                        <span>点击将导入{{ tableQuery.total }}个用户,此操作会耗费较长时间,请耐心等待。</span>
+                    </template>
+                    <a-button @click="importAll" :loading="importLoading">全部导入</a-button>
+                </a-tooltip>
                 <a-button :style="{ marginRight: '8px' }" @click="handleCancel"> 取消 </a-button>
-                <a-button type="primary" @click="handleOk" :loading="loading"> 确定 </a-button>
+                <a-tooltip placement="topLeft" v-if="!!tableData.length" :style="{ marginRight: '8px' }">
+                    <template slot="title">
+                        <span>点击将导入已选中的用户。</span>
+                    </template>
+                    <a-button type="primary" @click="handleOk" :loading="loading"> 导入 </a-button>
+                </a-tooltip>
             </div>
         </a-drawer>
     </div>
@@ -80,6 +99,7 @@ export default {
             visible: false,
             loading: false,
             treeLoading: false,
+            importLoading: false,
             tableQuery: {
                 search_data: undefined,
                 search_type: 'username',
@@ -91,7 +111,7 @@ export default {
             selectedRowKeys: [],
             searchList: [
                 { name: '用户名', key: 'username' },
-                { name: '姓名', key: 'chname' },
+                { name: '姓名', key: 'display_name' },
             ],
             columns: [
                 { title: '用户名', dataIndex: 'username', ellipsis: true },
@@ -119,6 +139,7 @@ export default {
     methods: {
         searchTable() {
             this.tableQuery.current = 1
+            this.selectedRowKeys = []
             this.getTableData()
         },
         showModal() {
@@ -145,6 +166,8 @@ export default {
         tableChange({ current, pageSize }) {
             this.tableQuery.current = current
             this.tableQuery.pageSize = pageSize
+            this.selectedRowKeys = []
+            this.getTableData()
         },
         refresh() {
             this.selectedRowKeys = []
@@ -152,29 +175,57 @@ export default {
             this.searchTable()
         },
         checkAll() {
-            if (this.selectedRowKeys.length == this.tableDataShow.length) {
+            if (this.selectedRowKeys.length == this.tableData.length) {
                 this.selectedRowKeys = []
                 return
             }
-            this.selectedRowKeys = this.tableDataShow.map((item) => item.username)
+            this.selectedRowKeys = this.tableData.map((item) => item.username)
+        },
+        //全部导入
+        importAll() {
+			const hide = this.$message.loading('正在同步导入中...')
+            this.importLoading = true
+            addUserAdmin({ import_type: 'all' })
+                .then((res) => {
+                    this.selectedRowKeys = []
+                    this.$emit('done')
+                    this.$message.success(res.message)
+                    this.getTableData()
+                    this.visible = false
+                })
+                .finally(() => {
+                    this.importLoading = false
+					hide()
+                })
         },
         handleCancel(e) {
             this.visible = false
         },
         handleOk() {
-            this.visible = false
-        },
-        //
-        importUser(row) {
-            this.$set(row, 'loading', true)
-            addUserAdmin({ username: row.username })
+            this.loading = true
+            addUserAdmin({ username_list: this.selectedRowKeys })
                 .then((res) => {
+                    this.selectedRowKeys = []
                     this.$emit('done')
                     this.$message.success(res.message)
                     this.getTableData()
                 })
                 .finally(() => {
                     this.loading = false
+                    this.visible = false
+                })
+        },
+        //
+        importUser(row) {
+            this.$set(row, 'loading', true)
+            addUserAdmin({ username_list: [row.username] })
+                .then((res) => {
+                    this.selectedRowKeys = []
+                    this.$emit('done')
+                    this.$message.success(res.message)
+                    this.getTableData()
+                })
+                .finally(() => {
                     this.$set(row, 'loading', false)
                 })
         },

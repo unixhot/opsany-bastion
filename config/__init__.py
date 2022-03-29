@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 __all__ = ['celery_app', 'RUN_VER', 'APP_CODE', 'SECRET_KEY', 'BK_URL', 'BASE_DIR']
@@ -14,7 +14,7 @@ from blueapps.core.celery import celery_app
 # SaaS运行版本，如非必要请勿修改
 RUN_VER = 'open'
 # SaaS应用ID
-APP_CODE = os.getenv("APP_ID", "bastion")
+APP_CODE = os.getenv("APP_ID", "opsany-bastion")
 # SaaS安全密钥，注意请勿泄露该密钥
 SECRET_KEY = os.getenv("APP_TOKEN")
 # PAAS平台URL

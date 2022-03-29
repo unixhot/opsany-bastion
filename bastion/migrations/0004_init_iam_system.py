@@ -6,7 +6,8 @@ from bastion.utils.create_iam import init_system_to_iam
 
 
 def run_init(apps, schema_editor):
-    init_system_to_iam()
+    # init_system_to_iam()
+    pass
 
 
 class Migration(migrations.Migration):

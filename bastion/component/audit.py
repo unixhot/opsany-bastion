@@ -9,7 +9,7 @@ from django.http import JsonResponse, HttpResponse
 
 from django.conf import settings
 from bastion.component.common import GetModelData, GetUserInfo
-from bastion.models import OperationLogModel, SessionLogModel, CommandLogModel
+from bastion.models import OperationLogModel, SessionLogModel, CommandLogModel, SessionLogInfoModel
 from bastion.utils.esb_api import EsbApi
 from bastion.utils.status_code import success, SuccessStatusCode, ErrorStatusCode, error
 from bastion.core.terminal.component import SSHBaseComponent
@@ -112,7 +112,11 @@ class SessionLog:
             file_path = os.path.join(settings.ORI_GUACD_PATH, "logfile")
         elif type == "terminal":
             log_name += ".log"
-            file_path = settings.TERMINAL_PATH
+            log_query = SessionLogInfoModel.fetch_one(log_name=log_name)
+            if not log_query:
+                file_path = settings.TERMINAL_PATH
+            else:
+                return 1, log_query.info
         else:
             return False, '会话信息不存在!'
         full_path = os.path.join(file_path, log_name)

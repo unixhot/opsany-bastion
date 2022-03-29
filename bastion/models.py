@@ -1740,3 +1740,11 @@ class StrategyCommandCredentialHostModel(BaseModel):
         if self.credential_group:
             dt["credential_group"] = self.credential_group.to_base_dict()
         return dt
+
+
+class SessionLogInfoModel(BaseModel):
+    log_name = models.CharField(max_length=128)
+    info = models.TextField()
+
+    class Meta:
+        db_table = "session_log_info"

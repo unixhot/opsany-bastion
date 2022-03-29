@@ -26,8 +26,7 @@ if [ ! -f ./install.config ];then
       echo "Please Copy install.config and Change: cp install.config.example install.config"
       exit
 else
-    grep '^[A-Z]' install.config > install.env
-    source ./install.env && rm -f install.env
+    source ./install.config
 fi
 
 # Check Install requirement
@@ -42,7 +41,7 @@ install_check(){
 # Install Initialize
 opsany_init(){
     shell_log "Start: Install Init"
-    mkdir -p ${INSTALL_PATH}/{uploads/guacamole,uploads/workbench/icon,conf,esb,logs,saas/apps,saas/saasapp,salt-volume/certs,salt-volume/srv/pillar,salt-volume/srv/salt,salt-volume/etc,paasagent-volume,redis-volume,mongodb-volume,mysql-volume}
+    mkdir -p ${INSTALL_PATH}/{uploads/guacamole,logs,saas/apps,saas/saasapp}
     cd $CDIR
     /bin/cp -r ../install/conf ${INSTALL_PATH}/
     ## init for esb

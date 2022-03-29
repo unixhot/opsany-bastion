@@ -1,7 +1,6 @@
 from django.views import View
 
 from bastion.component.resource import Host, HostGroup, HostCredential, UserGroup, User, AuthHost, AuthResource
-from bastion.utils.decorator import user_sync
 
 
 class HostGroupView(View):
@@ -19,7 +18,6 @@ class HostGroupView(View):
 
 
 class HostGroupConsoleView(View):
-    @user_sync
     def get(self, request):
         return HostGroup().get_host_group_console(request)
 
@@ -41,6 +39,7 @@ class HostView(View):
 class AuthHostView(View):
     def get(self, request):
         return AuthHost().get_auth_host(request)
+
 
 class AuthResourceView(View):
     def get(self, request, **kwargs):

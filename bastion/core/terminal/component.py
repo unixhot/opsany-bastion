@@ -5,7 +5,6 @@ import ast
 import re
 import time
 import redis
-from channels.layers import get_channel_layer
 from six import string_types as basestring
 import struct
 import paramiko
@@ -33,15 +32,18 @@ except ImportError:
     has_termios = False
     # raise Exception('This project does\'t support windows system!')
 
-from bastion.models import SessionLogModel, CommandLogModel, SessionCommandHistoryModel
+from bastion.models import SessionLogModel, CommandLogModel, SessionCommandHistoryModel, SessionLogInfoModel
 from bastion.core.status_code import WebSocketStatusCode
 from bastion.component.core import CheckUserHostComponent
 import logging
 
 app_logger = logging.getLogger("app")
 
-
-channel_layer = get_channel_layer()
+try:
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+except:
+    pass
 
 
 class SSHBaseComponent:
@@ -487,6 +489,7 @@ class SshTerminalThread(threading.Thread):
                             new_data = str(data, encoding="utf8")
                         except:
                             new_data = str(data)
+                        app_logger.info("{}".format(new_data))
                         if self.chan.vim_flag:
                             # in vim or 多行输入
                             pass
@@ -616,9 +619,13 @@ class InterActiveShellThread(threading.Thread):
             },
             'stdout': list(map(lambda frame: [round(frame[0], 6), frame[1]], stdout))
         }
-        self.make_log_dir('/'.join(os.path.join(settings.TERMINAL_PATH, log_name).rsplit('/')[0:-1]))
-        with open(os.path.join(settings.TERMINAL_PATH, log_name), "a") as f:
-            f.write(json.dumps(attrs, ensure_ascii=True, cls=FloatEncoder, indent=2))
+        # self.make_log_dir('/'.join(os.path.join(settings.TERMINAL_PATH, log_name).rsplit('/')[0:-1]))
+        # with open(os.path.join(settings.TERMINAL_PATH, log_name), "a") as f:
+        #     f.write(json.dumps(attrs, ensure_ascii=True, cls=FloatEncoder, indent=2))
+        SessionLogInfoModel.create(**{
+            "log_name": log_name,
+            "info": str(json.dumps(attrs, ensure_ascii=True, cls=FloatEncoder, indent=2)),
+        })
 
     def handle_sz_end(self, data, channel):
         if data == b'rz\r' or data == b'OO':
@@ -753,16 +760,25 @@ class InterActiveShellThread(threading.Thread):
                 except UnicodeDecodeError:
                     channel.send(bytes_data=data)
                 except Exception as e:
-                    if elementid:
-                        channel.send(json.dumps(['stdout', 'A bug find,You can report it to me' + smart_unicode(e),
-                                                 elementid.rsplit('_')[0]]))
-                    else:
-                        channel.send("\r")
+                    try:
+                        if elementid:
+                            channel.send(json.dumps(['stdout', 'A bug find,You can report it to me' + smart_unicode(e),
+                                                     elementid.rsplit('_')[0]]))
+                        else:
+                            channel.send("\r")
+                    except:
+                        pass
         finally:
-            channel.send('\r\nconnection closed...')
-            time.sleep(2)
+            try:
+                channel.send('\r\nconnection closed...')
+            except:
+                pass
+            try:
+                channel.close()
+            except:
+                pass
             sshchan.close()
-            channel.close()
+            time.sleep(2)
             self.create_log(width, height, begin_time, stdout, log_name)
 
     def interactive_shell(self, chan, channel, log_name=None, width=90, height=40, elementid=None):
