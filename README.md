@@ -20,6 +20,7 @@ opsany-bastion是OpsAny产品系列中首个开源的项目，使用Apache2.0开
 ## 开发和部署
 
 - [生产环境部署](docs/blueking.md)
+- [生产环境更新](docs/update.md)
 - [开发环境部署](docs/develop.md)
 
 ## 社区支持
