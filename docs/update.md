@@ -47,29 +47,19 @@ opsany-bastion_V1.2.3.tar.gz
 ![部署截图](./static/bastion-deploy.png)
 
 
+### 替换Websocket容器
 
-### 部署堡垒机Websocket容器
-
-堡垒机Websocket是一个独立的服务，默认监听8004端口，使用Docker容器启动，需要准备一台安装了Docker的主机，由于蓝鲸社区版的运行SAAS的Docker没有NAT网卡，所以需要单独一台安装了Docker的主机。
-
-1. 准备websocket配置文件。
-
-> 配置文件也存放在opsany-bastion项目中。
+1. 停止老版本websocket容器
 
 ```
-#克隆项目代码
-cd /opt/opsany-bastion && git pull
-#从配置模板生成配置文件
-cd /opt/opsany-bastion/install && cp install.config.example install.config
-#设置为蓝鲸社区版的访问域名
-DOMAIN_NAME=demo.opsany.com
-#设置本机的内网IP地址
-LOCAL_IP=192.168.56.11
-
-
-
-- 启动Websocket容器
+docker stop opsany-bk-websocket && docker rm opsany-bk-websocket
 ```
+
+2. 启动新的Websocket容器
+
+```
+INSTALL_PATH=/data/bkce/opsany-bastion
+
 docker run -d --restart=always --name opsany-bk-websocket \
     -p 8004:8004 -v ${INSTALL_PATH}/logs:/opt/opsany/logs \
     -v ${INSTALL_PATH}/uploads:/opt/opsany/uploads \
@@ -77,12 +67,12 @@ docker run -d --restart=always --name opsany-bk-websocket \
     -v ${INSTALL_PATH}/conf/settings_production.py.websocket.init:/opt/opsany/websocket/config/__init__.py \
     -v /etc/localtime:/etc/localtime:ro \
     -v /usr/share/zoneinfo:/usr/share/zoneinfo \
-    ${PAAS_DOCKER_REG}/opsany-bk-websocket:v1.2.1
+    registry.cn-beijing.aliyuncs.com/opsany/opsany-bk-websocket:v1.2.3
 ```
 
 3. 进入到Websocket容器里增加hosts
 
-需要保证Websocket能和PAAS进行通信，需要绑定hosts，访问到PAAS的Nginx的内网IP地址。
+需要保证Websocket能和PAAS进行通信，需要绑定hosts，访问到PAAS的Nginx的内网IP地址。请自行进行修改。
 
 ```
 docker exec -it opsany-bk-websocket /bin/sh
