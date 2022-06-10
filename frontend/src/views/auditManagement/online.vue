@@ -27,7 +27,9 @@
                 :data-source="tableData"
             >
                 <template slot="action" slot-scope="text, record">
-                    <a v-if="$store.state.btnAuth.btnAuth.bastion_session_off_line" @click="offline(record)"
+                    <a
+                        v-if="$store.state.btnAuth.btnAuth.bastion_session_off_line"
+                        @click="$refs.AuthModal.handleAuth('logout-session').then(() => offline(record))"
                         >强制下线</a
                     >
                 </template>
@@ -36,11 +38,12 @@
                 v-if="tableData.length > 0"
                 :disabled="selectedRow.length == 0"
                 icon="delete"
-                @click="batchDelete"
+                @click="$refs.AuthModal.handleAuth('logout-session').then(() => batchDelete())"
                 style="float: left; margin: -50px 10px 0 0"
                 >批量下线</a-button
             >
         </a-card>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 

@@ -192,6 +192,8 @@ echo "10.0.1.65 ce.bktencent.com" >>/etc/hosts
 upstream OPEN_PAAS_CONSOLE {
     {{ range service "paas-console" }}server {{ .Address }}:{{ .Port }} max_fails=1 fail_timeout=30s;
     {{else}}server 127.0.0.1:8004;{{ end }}
+#将127.0.0.1修改为运行WebSocket主机的IP地址。
+
 }
 
 # OpsAny Bastion WebSocket

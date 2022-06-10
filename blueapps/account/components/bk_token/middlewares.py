@@ -25,7 +25,7 @@ class LoginRequiredMiddleware(MiddlewareMixin):
         1. views decorated with 'login_exempt' keyword
         2. User has logged in calling auth.login
         """
-        # request.COOKIES["bk_token"] = "LilyG11EWaKBPTOF1ntULcXrkpK4IIu4v_K2eHOlcYg"
+        # request.COOKIES["bk_token"] = "RNIVYTLxdZBVn89YIONVOFo61Jt7OmBAY5rZw8lGA2k"
         if hasattr(request, 'is_wechat') and request.is_wechat():
             return None
 

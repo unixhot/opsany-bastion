@@ -26,14 +26,20 @@
                 :data-source="tableData"
             >
                 <template slot="action" slot-scope="text, record">
-                    <a style="margin: 0 10px 0 0" @click="preview(record)">播放历史</a>
+                    <a
+                        style="margin: 0 10px 0 0"
+                        @click="$refs.AuthModal.handleAuth('play-history').then(() => preview(record))"
+                        >播放历史</a
+                    >
                     <a
                         :disabled="record.system_type != 'Linux'"
                         @click="
-                            $router.push({
-                                path: '/auditManagement/historical/historicalDetails',
-                                query: { id: record.id },
-                            })
+                            $refs.AuthModal.handleAuth('get-history').then(() =>
+                                $router.push({
+                                    path: '/auditManagement/historical/historicalDetails',
+                                    query: { id: record.id },
+                                })
+                            )
                         "
                         >查看详情</a
                     >
@@ -42,6 +48,7 @@
         </a-card>
         <WindowsPlayer ref="WindowsPlayer"></WindowsPlayer>
         <PlayerModel ref="PlayerModel"></PlayerModel>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 

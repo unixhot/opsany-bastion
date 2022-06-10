@@ -245,9 +245,9 @@ class WebSSH(WebsocketConsumer):
             password = ""
         return password
 
-    def create_proxy_sock(self, ip, port, username, password, host_ip, host_port):
+    def create_proxy_sock_by_password(self, ip, port, username, password, host_ip, host_port):
         """
-        创建代理连接
+        通过密码创建代理连接
         """
         try:
             proxy = paramiko.SSHClient()
@@ -258,7 +258,27 @@ class WebSSH(WebsocketConsumer):
                         )
             return True, sock
         except Exception as e:
-            app_logging.error("[ERROR] SSH web socket, create_proxy_sock error: {}, param: {}".format(
+            app_logging.error("[ERROR] SSH web socket, create_proxy_sock_by_password error: {}, param: {}".format(
+                    str(e), str(ip)
+            ))
+            return False, None
+
+    def create_proxy_sock_by_ssh_key(self, ip, port, username, ssh_key, passphrase, host_ip, host_port):
+        """
+        通过密码创建代理连接
+        """
+        try:
+            proxy = paramiko.SSHClient()
+            proxy.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            io_pri_key = io.StringIO(ssh_key)
+            pri_key = paramiko.RSAKey.from_private_key(io_pri_key, password=self.get_password(passphrase))
+            proxy.connect(hostname=ip, port=port, username=username, pkey=pri_key)
+            sock = proxy.get_transport().open_channel(
+                'direct-tcpip', (host_ip, host_port), (ip, 0)
+                        )
+            return True, sock
+        except Exception as e:
+            app_logging.error("[ERROR] SSH web socket, create_proxy_sock_by_ssh_key error: {}, param: {}".format(
                     str(e), str(ip)
             ))
             return False, None
@@ -270,14 +290,25 @@ class WebSSH(WebsocketConsumer):
         network_proxy = host.network_proxy
         sock = None
         if network_proxy:
-            status, sock = self.create_proxy_sock(
-                    network_proxy.linux_ip,
-                    network_proxy.linux_port,
-                    network_proxy.linux_login_name,
-                    network_proxy.linux_login_password,
-                    self.host.host_address,
-                    self.host.port
-                )
+            if network_proxy.credential_type == network_proxy.CREDENTIAL_PASSWORD:
+                status, sock = self.create_proxy_sock_by_password(
+                        network_proxy.linux_ip,
+                        network_proxy.linux_port,
+                        network_proxy.linux_login_name,
+                        network_proxy.linux_login_password,
+                        self.host.host_address,
+                        self.host.port
+                    )
+            else:
+                status, sock = self.create_proxy_sock_by_ssh_key(
+                        network_proxy.linux_ip,
+                        network_proxy.linux_port,
+                        network_proxy.linux_login_name,
+                        network_proxy.ssh_key,
+                        network_proxy.passphrase,
+                        self.host.host_address,
+                        self.host.port
+                    )
             if not status:
                 self.close_connect(WebSocketStatusCode.PROXY_LINK_ERROR)
                 return

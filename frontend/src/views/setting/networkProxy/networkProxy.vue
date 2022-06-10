@@ -22,7 +22,7 @@
                 </div>
                 <a-button
                     v-if="$store.state.btnAuth.btnAuth.bastion_network_proxy_create"
-                    @click="$refs.AddNetworkProxy.show()"
+                    @click="$refs.AuthModal.handleAuth('create-network-proxy').then(() => $refs.AddNetworkProxy.show())"
                     icon="plus"
                     type="primary"
                     >新建</a-button
@@ -99,12 +99,16 @@
                 <template slot="action" slot-scope="text, record">
                     <a
                         v-if="$store.state.btnAuth.btnAuth.bastion_network_proxy_update"
-                        @click="$refs.AddNetworkProxy.show(record)"
+                        @click="
+                            $refs.AuthModal.handleAuth('modify-network-proxy').then(() =>
+                                $refs.AddNetworkProxy.show(record)
+                            )
+                        "
                         >编辑</a
                     >
                     <a
                         v-if="$store.state.btnAuth.btnAuth.bastion_network_proxy_delete"
-                        @click="deleteData(record)"
+                        @click="$refs.AuthModal.handleAuth('delete-network-proxy').then(() => deleteData(record))"
                         style="color: #333; margin: 0 0 0 10px"
                         >删除</a
                     >
@@ -112,6 +116,7 @@
             </a-table>
         </a-card>
         <AddNetworkProxy @father="getNetworkProxyData" ref="AddNetworkProxy"></AddNetworkProxy>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 

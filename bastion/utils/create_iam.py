@@ -13,7 +13,7 @@ def init_system_to_iam():
         "description_en": "bastion iam",
         "clients": "bastion,",
         "provider_config": {
-            "host": "{}/o/bastion/".format("BK_PAAS_HOST"),
+            "host": "{}/o/{}/".format("BK_PAAS_HOST", os.getenv("APP_ID", APP_CODE)),
             "auth": "basic",
             "healthz": "/test/"
         }

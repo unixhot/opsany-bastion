@@ -24,9 +24,9 @@ class BaseMenuStrategyCtrl(View):
         esb_obj = EsbApi(token)
         res_data = esb_obj.get_user_info()
         self.create_or_update_current_user(res_data)
-        if res_data.get("role") == 1:
-            return JsonResponse(admin)
-        return JsonResponse(user)
+        # if res_data.get("role") == 1:
+        return JsonResponse(admin)
+        # return JsonResponse(user)
         # if res_data:
         # 创建/更新当前用户信息
         # self.create_or_update_current_user(esb_obj)
@@ -136,6 +136,13 @@ class ReadAllMessageView(View):
         return JsonResponse(success(SuccessStatusCode.OPERATION_SUCCESS))
 
 
+class CopyrightConfigView(View):
+    def get(self, request):
+        token = request.COOKIES.get("bk_token")
+        end_data = EsbApi(token).get_copyright_config()
+        return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, end_data))
+
+
 class GetNavCollectionView(View):
     """
     获取用户搜藏信息
@@ -190,8 +197,10 @@ class HomePageView(View):
             host_count = len(user_query.get_user_host_queryset_v2())
             session_finished_count = SessionLogModel.fetch_all(is_finished=True, user=user_query.username).count()
             session_unfinished_count = SessionLogModel.fetch_all(is_finished=False, user=user_query.username).count()
-            strategy_access_count = len(user_query.get_user_strategy_access_queryset())
-            strategy_command_count = len(user_query.get_strategy_command_queryset())
+            # 统计有效期内的全部访问策略（登录时间段不做处理，有可能不在时间段内，依然会统计上） user_query.get_user_strategy_access_queryset()会处理登录时间段
+            strategy_access_count = len(user_query.get_user_strategy_access_queryset_v3())
+            # 统计有效期内的全部命令策略（生效时间段不做处理，有可能不在时间段内，依然会统计上）user_query.get_strategy_command_queryset()会处理生效时间段
+            strategy_command_count = len(user_query.get_strategy_command_queryset_v3())
             credential_password_count, credential_ssh_count = 0, 0
             for host_credential in user_query.get_auth_host_credential_queryset():
                 if host_credential.credential.credential_type == "ssh_key":

@@ -31,7 +31,7 @@
                         v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_create"
                         icon="plus"
                         type="primary"
-                        @click="add"
+                        @click="$refs.AuthModal.handleAuth('create-access-credential').then(() => add())"
                         >新建</a-button
                     >
                 </div>
@@ -62,18 +62,34 @@
                 :rowKey="(item) => item.id"
             >
                 <template slot="name" slot-scope="text, row">
-                    <a :title="text" type="link" @click="viewDetail(row)">{{ text }}</a>
+                    <a
+                        :title="text"
+                        type="link"
+                        @click="$refs.AuthModal.handleAuth('get-access-credential').then(() => viewDetail(row))"
+                        >{{ text }}</a
+                    >
                 </template>
                 <template slot="status" slot-scope="text, row">
                     <a-switch
                         v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_on_off"
-                        v-model="row.status"
-                        @click="changeStatus(row)"
+						:checked="row.status"
+						:loading="row.stateLoading"
+                        @click="$refs.AuthModal.handleAuth('modify-access-credential').then(() => changeStatus(row))"
                     ></a-switch>
                     {{ text ? '开启' : '关闭' }}
                 </template>
-                <template slot="user" slot-scope="text, row">
-                    {{ text.user.length }}/{{ text.user_group.length }}
+                <template slot="userTitle">
+                    <span>关联用户</span>
+                    <a-tooltip placement="top" title="用户/用户组" arrow-point-at-center>
+                        <a-icon style="margin: 0 0 0 3px; color: #666" type="exclamation-circle" />
+                    </a-tooltip>
+                </template>
+                <template slot="user" slot-scope="text"> {{ text.user.length }}/{{ text.user_group.length }} </template>
+                <template slot="voucherTitle">
+                    <span>关联资源凭证</span>
+                    <a-tooltip placement="top" title="密码凭证/SSH密钥/凭证分组" arrow-point-at-center>
+                        <a-icon style="margin: 0 0 0 3px; color: #666" type="exclamation-circle" />
+                    </a-tooltip>
                 </template>
                 <template slot="credential_host" slot-scope="text, row">
                     {{ text.password_credential_host_id.length }}/{{ text.ssh_credential_host_id.length }}/{{
@@ -81,24 +97,30 @@
                     }}
                 </template>
                 <template slot="action" slot-scope="text, row">
-                    <a-button type="link" size="small" @click="viewDetail(row)">查看</a-button>
+                    <a-button
+                        type="link"
+                        size="small"
+                        @click="$refs.AuthModal.handleAuth('get-access-credential').then(() => viewDetail(row))"
+                        >查看</a-button
+                    >
                     <a-button
                         type="link"
                         size="small"
                         v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_update"
-                        @click="edit(row)"
+                        @click="$refs.AuthModal.handleAuth('modify-access-credential').then(() => edit(row))"
                         >编辑</a-button
                     >
                     <a-button
                         type="link"
                         size="small"
                         v-if="$store.state.btnAuth.btnAuth.bastion_access_strategy_delete"
-                        @click="del(row)"
+                        @click="$refs.AuthModal.handleAuth('delete-access-credential').then(() => del(row))"
                         >删除</a-button
                     >
                 </template>
             </a-table>
             <ControlVisitPolicy ref="ControlVisitPolicy" @done="getTableData"></ControlVisitPolicy>
+            <AuthModal ref="AuthModal"></AuthModal>
         </a-card>
     </div>
 </template>
@@ -128,11 +150,16 @@ export default {
             columns: [
                 { title: '策略名称', dataIndex: 'name', ellipsis: true, scopedSlots: { customRender: 'name' } },
                 { title: '状态', dataIndex: 'status', ellipsis: true, scopedSlots: { customRender: 'status' } },
-                { title: '关联用户', dataIndex: 'user', ellipsis: true, scopedSlots: { customRender: 'user' } },
                 {
-                    title: '关联资源凭证',
+                    dataIndex: 'user',
+                    ellipsis: true,
+                    slots: { title: 'userTitle' },
+                    scopedSlots: { customRender: 'user' },
+                },
+                {
                     dataIndex: 'credential_host',
                     ellipsis: true,
+                    slots: { title: 'voucherTitle' },
                     scopedSlots: { customRender: 'credential_host' },
                 },
                 { title: '创建时间', dataIndex: 'create_time', ellipsis: true },
@@ -180,12 +207,15 @@ export default {
         changeStatus(row) {
             const params = {
                 id: row.id,
-                status: row.status,
+                status: !row.status,
                 type: 'access',
             }
+			row.stateLoading = true
             editAccessStrategyStatus(params).then((res) => {
                 this.getTableData()
-            })
+            }).finally(() => {
+				row.stateLoading = false
+			})
         },
         getTableData() {
             this.tableLoading = true
@@ -197,6 +227,9 @@ export default {
                     this.tableData = data
                     this.tableQuery.current = current
                     this.tableQuery.total = total
+                    this.tableData.forEach((item) => {
+                        this.$set(item, 'stateLoading', false)
+                    })
                     if (this.tableQuery.total > 0 && this.tableQuery.current > 1 && this.tableData.length == 0) {
                         this.tableQuery.current--
                         this.getTableData()

@@ -156,7 +156,7 @@ export default {
             file_upload: false, //是否可上传
             file_manager: false, //是否可看文件管理
             showRight: true, //是否展示右侧
-            fontSize: 14,
+            fontSize: 16,
             linkType: 'host',
         }
     },
@@ -176,7 +176,7 @@ export default {
             }
             const apiKey = this.linkType == 'dataBase' ? 'databases' : 'terminalchannel'
             this.url = isDev
-                ? `wss://dev.opsany.cn/ws/bastion/${apiKey}/${stringifyUrl(query)}`
+                ? `wss://ce.bktencent.com/ws/bastion/${apiKey}/${stringifyUrl(query)}`
                 : `${protocol}://${window.location.host}/ws/bastion/${apiKey}/${stringifyUrl(query)}`
 
             this.xtemLoading = true
@@ -582,6 +582,16 @@ export default {
                 this.timer = setTimeout(fn, wait)
             }
         },
+        beforeunload(e) {
+            this.closeRemote()
+            return
+            //以下为测试代码
+            e = e || window.event
+            if (e) {
+                e.returnValue = '系统可能不会保存你所做的更改，请确认是否退出'
+            }
+            return '系统可能不会保存你所做的更改，请确认是否退出'
+        },
     },
     mounted() {
         this.host_token = this.$route.query.host_token
@@ -598,7 +608,7 @@ export default {
 
         const fontSize = this.$route.query.fontSize
         if (isNaN(fontSize)) {
-            this.fontSize = 14
+            this.fontSize = 16
         } else {
             if (fontSize - 0 > 20 || fontSize - 0 < 14) {
                 this.fontSize = 14
@@ -606,6 +616,10 @@ export default {
                 this.fontSize = fontSize - 0
             }
         }
+        window.addEventListener('beforeunload', this.beforeunload)
+        this.$once('hook:beforeDestroy', () => {
+            window.removeEventListener('beforeunload', this.beforeunload)
+        })
     },
     beforeDestroy() {
         this.socket.onsend(JSON.stringify(['close']))

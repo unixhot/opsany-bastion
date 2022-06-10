@@ -19,7 +19,13 @@
             </div>
             <div>
                 <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_create" icon="plus" type="primary" @click="add">新建</a-button>
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_create"
+                    icon="plus"
+                    type="primary"
+                    @click="$refs.AuthModal.handleAuth('create-command-list').then(() => add())"
+                    >新建</a-button
+                >
             </div>
         </div>
         <search-box :visible="visible" class="search_box">
@@ -47,28 +53,31 @@
             @change="tableChange"
             :rowKey="(item) => item.id"
         >
-            <template slot="name" slot-scope="text, row">
-                <a type="link" @click="viewDetail(row)">{{ text }}</a>
-            </template>
-            <template slot="user" slot-scope="text, row">
-                {{ text.user.length }}/{{ text.user_group.length }}
-            </template>
-            <template slot="credential" slot-scope="text, row">
-                {{ text.password_credential.length }}/{{ text.ssh_credential.length }}/{{
-                    text.credential_group.length
-                }}
-            </template>
             <template slot="action" slot-scope="text, row">
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_update" type="link" size="small" @click="edit(row)">编辑</a-button>
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_delete" type="link" size="small" @click="del(row)">删除</a-button>
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_update"
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('modify-command-list').then(() => edit(row))"
+                    >编辑</a-button
+                >
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_delete"
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('delete-command-list').then(() => del(row))"
+                    >删除</a-button
+                >
             </template>
         </a-table>
         <ControlCommand ref="ControlCommand" @done="getTableData"></ControlCommand>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 <script>
 import ControlCommand from './components/ControlCommand'
 import { getCommand, delCommand } from '@/api/command'
+import { getPageAuth } from '@/utils/pageAuth'
 export default {
     components: { ControlCommand },
     data() {
@@ -98,6 +107,9 @@ export default {
                     title: '提示内容',
                     dataIndex: 'block_info',
                     ellipsis: true,
+                    customRender: (text) => {
+                        return text || '-'
+                    },
                 },
                 { title: '操作', ellipsis: true, scopedSlots: { customRender: 'action' }, align: 'center' },
             ],
@@ -160,8 +172,11 @@ export default {
                 })
         },
     },
-    mounted() {
-        this.getTableData()
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'get-command-list')
+        if (hasAuth) {
+            this.getTableData()
+        }
     },
 }
 </script>

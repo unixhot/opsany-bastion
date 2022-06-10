@@ -1,36 +1,63 @@
 <template>
     <div class="container">
         <div class="container_box">
-            <div class="container_box_left" :style="{ width: leftBoxWidth }">
-                <a-spin :spinning="treeLoading" style="height: 100%; width: 100%; margin-top:120%"> </a-spin>
-                <a-tree
-                    v-if="treeList.length"
-                    default-expand-all
-                    :treeData="treeList"
-                    :replaceFields="replaceFields"
-                    class="container_box_left_tree"
-                >
-                    <template slot="title" slot-scope="row">
-                        <a-dropdown :trigger="['contextmenu', 'click']">
-                            <span :title="row.name + `(${row.host_address})`" class="action_title">
-                                <a-icon
-                                    :type="row.type == 'group' ? (row.expanded ? 'folder-open' : 'folder') : 'database'"
-                                ></a-icon>
-                                {{ row.type == 'group' ? row.name : row.name }}</span
-                            >
-                            <template #overlay v-if="row.type == 'host'">
-                                <a-menu
-                                    @click="({ key: menuKey }) => onContextMenuClick(row, menuKey)"
-                                    style="width: 100px; text-align: center"
-                                >
-                                    <a-menu-item key="1"
-                                        >打开{{ row.system_type == 'Windows' ? '(新窗口)' : '' }}</a-menu-item
+            <div class="container_box_left" id="left_box" :style="{ width: leftBoxWidth }">
+                <div class="container_box_left_searchbox">
+                    <a-input-search
+                        v-model="treeQuery.search_data"
+                        placeholder="输入主机名、IP地址搜索"
+                        allowClear
+                        @search="getHostGroupList"
+                        autoClear
+                    ></a-input-search>
+                </div>
+                <a-spin :spinning="treeLoading" class="container_box_left_spin">
+                    <a-tree
+                        v-if="treeList.length"
+                        default-expand-all
+                        :treeData="treeList"
+                        :replaceFields="replaceFields"
+                        class="container_box_left_tree"
+                    >
+                        <template slot="title" slot-scope="row">
+                            <a-dropdown :trigger="['contextmenu', 'click']">
+                                <a-tooltip placement="right">
+                                    <template v-if="row.disabled" slot="title"
+                                        >由于访问策略限制，当前时段不允许登录。</template
                                     >
-                                </a-menu>
-                            </template>
-                        </a-dropdown>
-                    </template>
-                </a-tree>
+                                    <span
+                                        :title="row.name + `(${row.host_address || '-'})`"
+                                        class="action_title"
+                                        @click="onContextMenuClick(row, 1)"
+                                    >
+                                        <a-icon
+                                            :type="
+                                                row.type == 'group'
+                                                    ? row.expanded
+                                                        ? 'folder-open'
+                                                        : 'folder'
+                                                    : 'database'
+                                            "
+                                        ></a-icon>
+                                        {{ row.type == 'group' ? row.name : row.name }}
+                                        <span v-if="row.type == 'group'">({{ row.count }})</span>
+                                    </span>
+                                </a-tooltip>
+                                <!-- <template #overlay v-if="row.type == 'host'">
+                                    <a-menu
+                                        @click="({ key: menuKey }) => onContextMenuClick(row, menuKey)"
+                                        style="width: 100px; text-align: center"
+                                    >
+                                        <a-menu-item key="1"
+                                            >打开{{ row.system_type == 'Windows' ? '(新窗口)' : '' }}</a-menu-item
+                                        >
+                                    </a-menu>
+                                </template> -->
+                            </a-dropdown>
+                        </template>
+                    </a-tree>
+                </a-spin>
+                <div id="left_box_resize"></div>
             </div>
             <div class="container_box_center" :style="{ width: `calc(100% - ${leftBoxWidth} - ${rightBoxWidth})` }">
                 <a-tabs v-model="activeKey" type="editable-card" @edit="deleteCard" hideAdd @change="changeTabs">
@@ -107,13 +134,18 @@ export default {
             timer: null,
             activeHostToken: undefined,
             treeLoading: false,
+            treeQuery: {
+                search_data: undefined,
+            },
+            defaultLeftWidth: 230,
+            startX: 0,
         }
     },
     methods: {
         //获取左侧树列表
         getHostGroupList() {
             this.treeLoading = true
-            getHostGroupList()
+            getHostGroupList(this.treeQuery)
                 .then((res) => {
                     this.treeList = res.data
                 })
@@ -123,18 +155,24 @@ export default {
         },
         //删除一个标签页
         deleteCard(key) {
-            const index = this.tabList.findIndex((item) => item.index == key)
-            this.tabList.splice(index, 1)
-            if (this.tabList.length == 0) {
-                this.activeKey = undefined
-                this.activeHostToken = undefined
-                this.$refs.FileSend.resetData()
-                return
+            const activeComponent = this.$refs[key + '_Linux'][0]
+            if (activeComponent) {
+                activeComponent.sendClose()
             }
-            this.activeKey = this.tabList[this.tabList.length - 1].index
-            this.activeHostToken = this.tabList[this.tabList.length - 1].host_token
-            this.$refs.FileSend.getData(this.activeHostToken)
-            this.resizeLinux()
+            setTimeout(() => {
+                const index = this.tabList.findIndex((item) => item.index == key)
+                this.tabList.splice(index, 1)
+                this.$refs.FileSend.resetData()
+                if (this.tabList.length == 0) {
+                    this.activeKey = undefined
+                    this.activeHostToken = undefined
+                    return
+                }
+                this.activeKey = this.tabList[this.tabList.length - 1].index
+                this.activeHostToken = this.tabList[this.tabList.length - 1].host_token
+                this.$refs.FileSend.getData(this.activeHostToken)
+                this.resizeLinux()
+            }, 150)
         },
         //点击展开或者关闭左侧
         clickLeftDot() {
@@ -158,6 +196,8 @@ export default {
         },
         //点击左侧树的菜单
         onContextMenuClick(row, menuKey) {
+            if (row.type != 'host') return
+            if (row.disabled) return this.$message.info('由于访问策略限制，当前时段不允许登录。')
             if (menuKey == 1) {
                 const activeTab = this.tabList.find((item) => item.key == row.key)
                 if (activeTab) {
@@ -227,10 +267,52 @@ export default {
                 this.timer = setTimeout(fn, wait)
             }
         },
+        handleMouseMove() {
+            const leftbox = document.getElementById('left_box')
+            const left_box_resize = document.getElementById('left_box_resize')
+            left_box_resize.onmousedown = (e) => {
+                const defaultLeftWidth = this.defaultLeftWidth
+                this.startX = e.clientX
+
+                document.onmousemove = (e) => {
+                    if (!this.startX) return false
+                    const endX = e.clientX
+                    const moveX = endX - this.startX
+                    if (leftbox.offsetWidth <= 230 && endX <= 230) {
+                        this.defaultLeftWidth = 230
+                        this.resizeLinux()
+                        return
+                    }
+                    if (leftbox.offsetWidth >= 230 && endX >= document.body.offsetWidth / 3) {
+                        this.defaultLeftWidth = document.body.offsetWidth / 3
+                        this.resizeLinux()
+                        return
+                    }
+                    this.defaultLeftWidth = defaultLeftWidth + moveX
+                    this.resizeLinux()
+                }
+                document.onmouseup = (de) => {
+                    document.onmousemove = null
+                }
+            }
+            left_box_resize.onmouseup = (de) => {
+                document.onmousemove = null
+            }
+        },
+        beforeunload(e) {
+            for (let item of this.tabList) {
+                this.$nextTick(() => {
+                    const activeComponent = this.$refs[item.index + '_Linux'][0]
+                    if (activeComponent) {
+                        activeComponent.sendClose()
+                    }
+                })
+            }
+        },
     },
     computed: {
         leftBoxWidth() {
-            return this.showLeft ? '230px' : '0px'
+            return this.showLeft ? this.defaultLeftWidth + 'px' : '0px'
         },
         rightBoxWidth() {
             return this.showRight ? '320px' : '0px'
@@ -245,6 +327,13 @@ export default {
             window.removeEventListener('resize', resizeLinux)
             this.timer && clearTimeout(this.timer)
         })
+
+        window.addEventListener('beforeunload', this.beforeunload)
+        this.$once('hook:beforeDestroy', () => {
+            window.removeEventListener('beforeunload', this.beforeunload)
+        })
+
+        this.handleMouseMove()
     },
 }
 </script>
@@ -259,14 +348,27 @@ export default {
             // width: 230px;
             background: #1f1b1b;
             color: #ffffff;
-            transition: width 0.1s;
-            &_tree,
-            /deep/.ant-tree {
-                color: #ffffff;
+            // transition: width 0.1s;
+            position: relative;
+            #left_box_resize {
+                width: 8px;
+                position: absolute;
                 height: 100%;
-                overflow-y: scroll;
-                overflow-x: hidden;
-
+                right: 0px;
+                top: 0;
+                cursor: col-resize;
+                // background: green;
+                z-index: 1;
+                user-select: none;
+                &:hover {
+                    cursor: col-resize;
+                }
+            }
+            &_spin {
+                width: 100%;
+                height: 100%;
+                height: calc(100% - 60px);
+                overflow: hidden;
                 &::-webkit-scrollbar-thumb {
                     border-radius: 10px;
                     -webkit-box-shadow: inset 0 0 5px #474747;
@@ -295,6 +397,68 @@ export default {
                     white-space: nowrap;
                 }
             }
+            &_searchbox {
+                height: 50px;
+                line-height: 50px;
+                padding: 0 10px;
+                margin-top: 10px;
+                /deep/ .ant-input {
+                    background: #1f1b1b;
+                    border-radius: 16px;
+                    border-color: #444444;
+                    color: #dddddd;
+                    // color: #555555;
+                    &:focus {
+                        border-color: #444444;
+                        box-shadow: none;
+                    }
+                    &:hover {
+                        // color: #666666;
+                        border-color: #666666;
+                    }
+                }
+                /deep/ .ant-input-suffix {
+                    color: #555555;
+                    i {
+                        &:hover {
+                            color: #666666;
+                        }
+                    }
+                }
+            }
+            &_tree,
+            /deep/.ant-tree {
+                color: #ffffff;
+                overflow-y: hidden;
+                overflow-x: hidden;
+                height: calc(100%);
+                transition: all 0.3s;
+                &::-webkit-scrollbar-thumb {
+                    border-radius: 10px;
+                    -webkit-box-shadow: inset 0 0 5px #474747;
+                    box-shadow: inset 0 0 5px #474747;
+                    background: rgba(74, 69, 69, 0.8);
+
+                    &:hover {
+                        background: #4a4545;
+                    }
+                }
+
+                &::-webkit-scrollbar-track {
+                    -webkit-box-shadow: inset 0 0 5px #474747;
+                    box-shadow: inset 0 0 5px #474747;
+                    border-radius: 0;
+                }
+
+                &::-webkit-scrollbar {
+                    display: none; //会和拖拽有冲突
+                    width: 8px;
+                    background: #1f1b1b;
+                }
+                &:hover {
+                    overflow-y: scroll;
+                }
+            }
             /deep/ .ant-tree-node-content-wrapper,
             .ant-tree-node-content-wrapper-open {
                 color: #ffffff;
@@ -305,13 +469,22 @@ export default {
             /deep/ .ant-tree li .ant-tree-node-content-wrapper.ant-tree-node-selected {
                 background: #0ba360 !important;
             }
+            /deep/ .ant-tree-treenode-disabled {
+                .ant-tree-node-content-wrapper {
+                    .ant-tree-title {
+                        .action_title {
+                            color: #b0b3b3 !important;
+                        }
+                    }
+                }
+            }
         }
         &_center {
             width: calc(100% - 230px - 320px);
             background: #060101;
             color: #ffffff;
             position: relative;
-            transition: width 0.1s;
+            // transition: width 0.1s;
 
             /deep/ .ant-tabs {
                 height: 40px;
@@ -391,9 +564,12 @@ export default {
             // width: 320px;
             background: #ffffff;
             color: #333333;
-            transition: width 0.1s;
+            // transition: width 0.1s;
             overflow: hidden;
         }
     }
+}
+/deep/ .ant-spin-container {
+    height: 100%;
 }
 </style>

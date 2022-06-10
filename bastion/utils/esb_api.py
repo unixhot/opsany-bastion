@@ -172,6 +172,22 @@ class EsbApi(object):
         end_data = json.loads(response.text)
         return end_data.get("data")
 
+    def get_copyright_config(self):
+        API = "/api/c/compapi/rbac/get_copyright_config/"
+        req = {
+            "bk_app_code": self.app_code,
+            "bk_app_secret": self.app_secret,
+            "bk_token": self.token
+        }
+        URL = self.url + API
+        response = requests.get(url=URL, params=req, headers=self.headers, verify=False)
+        end_data = json.loads(response.text)
+        dt = {}
+        if end_data.get("result"):
+            end_data = end_data.get("data")
+            return end_data
+        return dt
+
     def get_user_group_sync(self):
         API = "/api/c/compapi/rbac/get_user_group_sync/"
         req = {
@@ -277,11 +293,9 @@ class EsbApi(object):
         }
         if not self.token:
             req["bk_access_token"] = self.access_token
-        print(req)
         URL = self.url + API
         response = requests.post(url=URL, json=req, headers=self.headers, verify=False)
         end_data = json.loads(response.text)
-        print(end_data)
         if end_data.get("data"):
             return end_data.get("data")
         return ""
@@ -296,11 +310,9 @@ class EsbApi(object):
         }
         if not self.token:
             req["bk_access_token"] = self.access_token
-        print(req)
         URL = self.url + API
         response = requests.get(url=URL, params=req, headers=self.headers, verify=False)
         end_data = json.loads(response.text)
-        print(end_data)
         if end_data.get("data"):
             return end_data.get("data")
         return []
@@ -328,7 +340,6 @@ class EsbApi(object):
             "search_type": search_type,
             "search_data": search_data,
         }
-        print(req)
         URL = self.url + API
         response = requests.get(url=URL, params=req, headers=self.headers, verify=False)
         end_data = json.loads(response.text)

@@ -13,7 +13,7 @@
                 ></a-input-search>
                 <a-button
                     v-if="$store.state.btnAuth.btnAuth.bastion_credential_group_create"
-                    @click="$refs.AddGroup.show()"
+                    @click="$refs.AuthModal.handleAuth('create-voucher-group').then(() => $refs.AddGroup.show())"
                     style="float: right"
                     icon="plus"
                     type="primary"
@@ -32,7 +32,11 @@
                     <a
                         :title="text"
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-voucher-group').then(() =>
+                                $router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })
+                            )
+                        "
                         >{{ text }}</a
                     >
                     <span :title="text" v-else>{{ text }}</span>
@@ -40,10 +44,20 @@
                 <template slot="description" slot-scope="text">
                     {{ text || '--' }}
                 </template>
+                <template slot="voucherTitle">
+                    <span>关联资源凭证</span>
+                    <a-tooltip placement="top" title="密码凭证/SSH密钥" arrow-point-at-center>
+                        <a-icon style="margin: 0 0 0 3px; color: #666" type="exclamation-circle" />
+                    </a-tooltip>
+                </template>
                 <template slot="voucher" slot-scope="text, record">
                     <a
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-voucher-group').then(() =>
+                                $router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })
+                            )
+                        "
                         >{{ text }}</a
                     >
                     <span v-else>{{ text }}</span>
@@ -53,21 +67,27 @@
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-voucher-group').then(() =>
+                                $router.push({ path: '/voucher/group/groupDetails', query: { id: record.id } })
+                            )
+                        "
                         >查看</a-button
                     >
                     <a-button
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_credential_group_update"
-                        @click="$refs.AddGroup.show(record)"
+                        @click="
+                            $refs.AuthModal.handleAuth('modify-voucher-group').then(() => $refs.AddGroup.show(record))
+                        "
                         >编辑</a-button
                     >
                     <a-button
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_credential_group_delete"
-                        @click="deleteGroup(record)"
+                        @click="$refs.AuthModal.handleAuth('delete-voucher-group').then(() => deleteGroup(record))"
                         style="color: #333"
                         >删除</a-button
                     >
@@ -76,12 +96,13 @@
             <a-button
                 v-if="tableData.length > 0"
                 :disabled="selectedRowKeys.length == 0"
-                @click="batchDelete"
+                @click="$refs.AuthModal.handleAuth('delete-voucher-group').then(() => batchDelete())"
                 style="float: left; margin: -50px 10px 0 0"
                 >批量删除</a-button
             >
         </a-card>
         <AddGroup @father="getGroupData" ref="AddGroup"></AddGroup>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 
@@ -109,9 +130,9 @@ export default {
                     ellipsis: true,
                 },
                 {
-                    title: '关联的凭证',
                     dataIndex: 'voucher',
                     ellipsis: true,
+                    slots: { title: 'voucherTitle' },
                     scopedSlots: { customRender: 'voucher' },
                 },
                 {

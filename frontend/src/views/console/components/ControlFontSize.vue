@@ -28,7 +28,7 @@ export default {
         return {
             visible: false,
             formData: {
-                font_size: 14,
+                font_size: 16,
             },
             formDataRules: {
                 credential_id: [{ required: true, message: '请选择资源凭证', trigger: 'change' }],

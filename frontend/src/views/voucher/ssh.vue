@@ -16,7 +16,7 @@
                 ></a-input-search>
                 <a-button
                     v-if="$store.state.btnAuth.btnAuth.bastion_ssh_create"
-                    @click="$refs.AddSsh.show()"
+                    @click="$refs.AuthModal.handleAuth('create-ssh-voucher').then(() => $refs.AddSsh.show())"
                     style="float: right"
                     icon="plus"
                     type="primary"
@@ -35,7 +35,11 @@
                     <a
                         :title="text"
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-ssh-voucher').then(() =>
+                                $router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })
+                            )
+                        "
                         >{{ text }}</a
                     >
                     <span :title="text" v-else>{{ text }}</span>
@@ -49,7 +53,11 @@
                 <template slot="relation" slot-scope="text, record">
                     <a
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-ssh-voucher').then(() =>
+                                $router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })
+                            )
+                        "
                         >{{ text }}</a
                     >
                     <span v-else>{{ text }}</span>
@@ -59,21 +67,25 @@
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_password_details"
-                        @click="$router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })"
+                        @click="
+                            $refs.AuthModal.handleAuth('get-ssh-voucher').then(() =>
+                                $router.push({ path: '/voucher/ssh/sshDetails', query: { id: record.id } })
+                            )
+                        "
                         >查看</a-button
                     >
                     <a-button
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_ssh_update"
-                        @click="$refs.AddSsh.show(record)"
+                        @click="$refs.AuthModal.handleAuth('modify-ssh-voucher').then(() => $refs.AddSsh.show(record))"
                         >编辑</a-button
                     >
                     <a-button
                         size="small"
                         type="link"
                         v-if="$store.state.btnAuth.btnAuth.bastion_ssh_delete"
-                        @click="deletePassword(record)"
+                        @click="$refs.AuthModal.handleAuth('delete-ssh-voucher').then(() => deletePassword(record))"
                         style="color: #333"
                         >删除</a-button
                     >
@@ -82,13 +94,14 @@
             <a-button
                 v-if="tableData.length > 0"
                 :disabled="selectedRowKeys.length == 0"
-                @click="batchDelete"
+                @click="$refs.AuthModal.handleAuth('delete-ssh-voucher').then(() => batchDelete())"
                 style="float: left; margin: -50px 10px 0 0"
                 >批量删除</a-button
             >
         </a-card>
 
         <AddSsh @father="getCredentialData()" ref="AddSsh"></AddSsh>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 

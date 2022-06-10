@@ -96,7 +96,7 @@ export default {
                 password: undefined,
                 width: undefined,
                 height: undefined,
-                font_size: 14,
+                font_size: 16,
                 winSize: 8,
             },
             formDataRules: {

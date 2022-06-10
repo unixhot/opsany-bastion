@@ -56,7 +56,13 @@
                             slot="action"
                             slot-scope="text, record"
                         >
-                            <a-button v-if="record.time_frame" size="small" type="link" @click="handleLogin(record)"
+                            <a-button
+                                v-if="record.time_frame"
+                                size="small"
+                                type="link"
+                                @click="
+                                    $refs.AuthModal.handleAuth('login-authorization-host').then(() => handleLogin(record))
+                                "
                                 >登录</a-button
                             >
                             <a-tooltip
@@ -66,7 +72,15 @@
                                 :overlayStyle="{ maxWidth: '300px' }"
                                 arrow-point-at-center
                             >
-                                <a-button disabled size="small" type="link" @click="handleLogin(record)">登录</a-button>
+                                <a-button
+                                    disabled
+                                    size="small"
+                                    type="link"
+                                    @click="
+                                        $refs.AuthModal.handleAuth('login-authorization-host').then(() => handleLogin(record))
+                                    "
+                                    >登录</a-button
+                                >
                             </a-tooltip>
                         </template>
                     </a-table>
@@ -75,6 +89,8 @@
         </a-card>
 
         <LoginHostModal ref="LoginHostModal"></LoginHostModal>
+        <AuthModal ref="AuthModal"></AuthModal>
+
     </div>
 </template>
 

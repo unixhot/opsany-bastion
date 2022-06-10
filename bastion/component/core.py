@@ -4,9 +4,7 @@ import json
 from django.http import JsonResponse, HttpResponse
 import uuid
 from django_redis import get_redis_connection
-import time
 import datetime
-from django.utils import timezone
 import logging
 import paramiko
 import settings
@@ -369,7 +367,8 @@ class CheckUserHostComponent:
                 if flag in command:
                     return True
             return False
-
+        if command in flag_list:
+            return command_list
         while get_status(flag_list, command):
             for command in command_list:
                 command_index = command_list.index(command)
@@ -646,7 +645,7 @@ class LinkCheckComponent(CheckUserHostComponent):
                     "ip": form.cleaned_data.get("ip"),
                     "host_name": form.cleaned_data.get("name"),
                     "system_type": form.cleaned_data.get("system_type"),
-                    "username": form.cleaned_data.get("username"),
+                    "username": form.cleaned_data.get("username", "root"),
                     "port": form.cleaned_data.get("ssh_port")
                 },
                 "file_download": True,
@@ -768,7 +767,7 @@ class HostFileComponent(LinkCheckComponent):
             ))
             return False, None
 
-    def client_ssh_by_ssh_key(self, ip, port, ssh_key, passphrase, sock=None):
+    def client_ssh_by_ssh_key(self, ip, port, login_name, ssh_key, passphrase, sock=None):
         """
         创建秘钥登陆SSH连接
         """
@@ -777,7 +776,7 @@ class HostFileComponent(LinkCheckComponent):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             io_pri_key = io.StringIO(ssh_key)
             pri_key = paramiko.RSAKey.from_private_key(io_pri_key, password=passphrase)
-            ssh.connect(hostname=ip, port=port, pkey=pri_key, timeout=3, sock=sock)
+            ssh.connect(hostname=ip, port=port, username=login_name, pkey=pri_key, timeout=3, sock=sock)
             return True, ssh
         except Exception as e:
             app_logging.error("[ERROR] SSH web socket, client_ssh_by_ssh_key error: {}, param: {}".format(
@@ -841,14 +840,16 @@ class HostFileComponent(LinkCheckComponent):
             else:
                 password = credential.passphrase
                 ssh_key = credential.ssh_key
-                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
+                login_name = credential.login_name
+                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, login_name, ssh_key, password, sock)
         else:
             if credential.credential_type == CredentialModel.CREDENTIAL_PASSWORD:
                 login_name = credential.login_name
                 status, ssh = self.client_ssh_by_password(host.host_address, host.port, login_name, password, sock)
             else:
                 ssh_key = credential.ssh_key
-                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, ssh_key, password, sock)
+                login_name = credential.login_name
+                status, ssh = self.client_ssh_by_ssh_key(host.host_address, host.port, login_name, ssh_key, password, sock)
         return status, ssh
 
     def _create_cache_ssh_link(self, token_data):
@@ -867,33 +868,38 @@ class HostFileComponent(LinkCheckComponent):
             status, ssh = self.client_ssh_by_ssh_key(
                     host_info.get("ip"),
                     host_info.get("port"),
+                    host_info.get("username", "root"),
                     host_info.get("ssh_key"),
                     host_info.get("password")
             )
         return status, ssh
 
     def get_sftp(self, token_data):
-        if not token_data.get("cache"):
-            host_id = token_data.get("host_id")
-            credential_host_id = token_data.get("credential_host_id")
-            password = token_data.get("password")
-            credential_host = HostCredentialRelationshipModel.fetch_one(id=credential_host_id)
-            host = HostModel.fetch_one(id=host_id)
-            status, ssh = self._create_ssh_link(credential_host.credential, host, password)
-            if status:
-                stdin, stdout, stderr = ssh.exec_command('pwd')
-                home_path = stdout.read().decode().strip('\n')
-                sftp = ssh.open_sftp()
-                return True, "", {"ssh": ssh, "sftp": sftp, "home_path": home_path}
-            return False, "连接主机失败", {}
-        else:
-            status, ssh = self._create_cache_ssh_link(token_data)
-            if status:
-                stdin, stdout, stderr = ssh.exec_command('pwd')
-                home_path = stdout.read().decode().strip('\n')
-                sftp = ssh.open_sftp()
-                return True, "", {"ssh": ssh, "sftp": sftp, "home_path": home_path}
-            return False, "连接主机失败", {}
+        try:
+            if not token_data.get("cache"):
+                host_id = token_data.get("host_id")
+                credential_host_id = token_data.get("credential_host_id")
+                password = token_data.get("password")
+                credential_host = HostCredentialRelationshipModel.fetch_one(id=credential_host_id)
+                host = HostModel.fetch_one(id=host_id)
+                status, ssh = self._create_ssh_link(credential_host.credential, host, password)
+                if status:
+                    stdin, stdout, stderr = ssh.exec_command('pwd')
+                    home_path = stdout.read().decode().strip('\n')
+                    sftp = ssh.open_sftp()
+                    return True, "", {"ssh": ssh, "sftp": sftp, "home_path": home_path}
+                return False, "连接主机失败", {}
+            else:
+                status, ssh = self._create_cache_ssh_link(token_data)
+                if status:
+                    stdin, stdout, stderr = ssh.exec_command('pwd')
+                    home_path = stdout.read().decode().strip('\n')
+                    sftp = ssh.open_sftp()
+                    return True, "", {"ssh": ssh, "sftp": sftp, "home_path": home_path}
+                return False, "连接主机失败", {}
+        except Exception as e:
+            app_logging.error("[ERROR] Link by sftp error: {}, params: {}".format(str(e)), str(token_data))
+            return False, "通过SFTP连接主机失败，请您检查您的SFTP服务是否开启", {}
 
     def get_linux_file_list(self, data, token_data):
         status, message, sftp_data = self.get_sftp(token_data)

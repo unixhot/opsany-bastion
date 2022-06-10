@@ -16,7 +16,12 @@
             </div>
             <div>
                 <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                <a-button icon="plus" type="primary" @click="ControlGroup">新建</a-button>
+                <a-button
+                    icon="plus"
+                    type="primary"
+                    @click="$refs.AuthModal.handleAuth('create-user-group').then(() => ControlGroup())"
+                    >新建</a-button
+                >
             </div>
         </div>
         <a-table
@@ -36,16 +41,30 @@
                 <a-button type="link" size="small" @click="preview(row)">查看</a-button>
             </template>
             <template slot="action" slot-scope="text, row">
-                <a-button type="link" size="small" @click="$refs.ControlGroup.showModal(row)">编辑</a-button>
-                <a-button type="link" size="small" @click="delGroup(row)">删除</a-button>
+                <a-button
+                    type="link"
+                    size="small"
+                    @click="
+                        $refs.AuthModal.handleAuth('modify-user-group').then(() => $refs.ControlGroup.showModal(row))
+                    "
+                    >编辑</a-button
+                >
+                <a-button
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('delete-user-group').then(() => delGroup(row))"
+                    >删除</a-button
+                >
             </template>
         </a-table>
         <ControlGroup ref="ControlGroup" @done="refresh"></ControlGroup>
         <PrevieUser ref="PrevieUser"></PrevieUser>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 <script>
 import { getUserGroupAdmin, delUserGroupAdmin } from '@/api/user-group-admin'
+import { getPageAuth } from '@/utils/pageAuth'
 import ControlGroup from './components/ControlGroup.vue'
 import PrevieUser from './components/PreviewUser.vue'
 export default {
@@ -61,9 +80,7 @@ export default {
                 total: 0,
                 data_type: 'list',
             },
-            searchList: [
-                { name: '用户组名称', key: 'name' },
-            ],
+            searchList: [{ name: '用户组名称', key: 'name' }],
             columns: [
                 { title: '用户组名称', dataIndex: 'name', ellipsis: true },
                 {
@@ -146,8 +163,11 @@ export default {
             this.getTableData()
         },
     },
-    mounted() {
-        this.getTableData()
+    async mounted() {
+        const hasAuth = await getPageAuth(this, 'get-user-group')
+        if (hasAuth) {
+            this.getTableData()
+        }
     },
 }
 </script>

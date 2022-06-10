@@ -16,7 +16,12 @@
             </div>
             <div>
                 <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                <a-button icon="download" type="primary" @click="importUser">导入</a-button>
+                <a-button
+                    icon="download"
+                    type="primary"
+                    @click="$refs.AuthModal.handleAuth('import-user').then(() => importUser())"
+                    >导入</a-button
+                >
             </div>
         </div>
         <a-table
@@ -34,17 +39,23 @@
             :row-selection="{ selectedRowKeys, onChange: onSelectChange }"
         >
             <template slot="action" slot-scope="text, row">
-                <a-button type="link" size="small" @click="del(row)">移除</a-button>
+                <a-button
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('delete-user').then(() => del(row))"
+                    >移除</a-button
+                >
             </template>
         </a-table>
         <a-button
             v-if="!!tableData.length"
             :disabled="!selectedRowKeys.length"
-            @click="del()"
+            @click="$refs.AuthModal.handleAuth('delete-user').then(() => del())"
             style="float: left; margin: -50px 10px 0 0"
             >批量移除</a-button
         >
         <ImportUser ref="ImportUser" @done="refresh"></ImportUser>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 <script>

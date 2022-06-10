@@ -58,7 +58,7 @@ export default {
             fileLoading: false,
             url: '',
             showRight: true, //是否展示右侧
-            fontSize: 14,
+            fontSize: 16,
         }
     },
     methods: {
@@ -77,7 +77,7 @@ export default {
                     height,
                 }
                 this.url = isDev
-                    ? `wss://dev.opsany.cn/ws/bastion/terminalchannel/${stringifyUrl(query)}`
+                    ? `wss://ce.bktencent.com/ws/bastion/terminalchannel/${stringifyUrl(query)}`
                     : `${protocol}://${window.location.host}/ws/bastion/terminalchannel/${stringifyUrl(query)}`
 
                 this.xtemLoading = true
@@ -321,14 +321,17 @@ export default {
                 this.timer = setTimeout(fn, wait)
             }
         },
+        sendClose() {
+            this.socket?.onsend(JSON.stringify(['close']))
+        },
     },
     mounted() {},
     beforeDestroy() {
-        this.socket.onsend(JSON.stringify(['close']))
+        this.socket?.onsend(JSON.stringify(['close']))
         this.socket.close()
     },
     beforeRouteLeave() {
-        this.socket.onsend(JSON.stringify(['close']))
+        this.socket?.onsend(JSON.stringify(['close']))
         this.socket.close()
     },
     computed: {},

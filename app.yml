@@ -58,4 +58,4 @@ libraries:
   version: 1.2.8
 - name: xlrd
   version: 1.2.0
-version: 1.2.1
+version: 1.2.2

@@ -1,5 +1,7 @@
 import time
 import datetime
+
+from django.db.models import Q
 from django.utils import timezone
 
 from django.db import models
@@ -226,6 +228,7 @@ class UserInfo(BaseModel):
         return list(set(host_queryset))
 
     def get_user_host_queryset_v2(self):
+        # 获取用户授权的主机
         host_credential_queryset = self.get_host_credential_queryset()
         host_queryset = [host_credential_query.host for host_credential_query in host_credential_queryset]
         return list(set(host_queryset))
@@ -238,7 +241,7 @@ class UserInfo(BaseModel):
         return list(set(host_queryset))
 
     def get_user_host_in_group(self, group, search_data=None):
-        host_credential_queryset = self.get_host_credential_queryset()
+        host_credential_queryset = self.get_host_credential_queryset_v3()
         host_queryset = []
         for host_credential_query in host_credential_queryset:
             if host_credential_query.host.group == group:
@@ -250,6 +253,7 @@ class UserInfo(BaseModel):
         return list(set(host_queryset))
 
     def get_strategy_command_queryset(self):
+        # 查询命令策略打开，有效期内，生效时间段内全部策略
         user_strategy_command_queryset = list(self.user_strategy_command.get_queryset())
         for group_user in self.user_group.get_queryset():
             user_strategy_command_queryset.extend(group_user.user_group.user_group_strategy_command.get_queryset())
@@ -299,11 +303,52 @@ class UserInfo(BaseModel):
                             in_login_time_limit.append((week_day, hour))
                             break
                 if in_login_time_limit:
-                    check_time = False
+                    check_time = True
                 else:
-                    return True
+                    return False
             except Exception as e:
                 return False
+        return check_time
+
+    def get_strategy_command_queryset_v3(self):
+        # 查询命令策略打开，有效期内（生效时间段无论是否有效都将统计到内）全部策略
+        user_strategy_command_queryset = list(self.user_strategy_command.get_queryset())
+        for group_user in self.user_group.get_queryset():
+            user_strategy_command_queryset.extend(group_user.user_group.user_group_strategy_command.get_queryset())
+        all_strategy_command_queryset = [strategy_command_user_group.strategy_command for strategy_command_user_group in
+                                         user_strategy_command_queryset]
+        login_time_open_strategy_command_query = list()
+        for strategy_command_query in all_strategy_command_queryset:
+            check_time = self.check_strategy_command_valid_v3(strategy_command_query)
+            if check_time and strategy_command_query not in login_time_open_strategy_command_query:
+                login_time_open_strategy_command_query.append(strategy_command_query)
+        return login_time_open_strategy_command_query
+
+    def check_strategy_command_valid_v3(self, strategy_query):
+        now_datetime = datetime.datetime.now()
+        if strategy_query.status:
+            check_time = True
+        else:
+            return False
+        start_time = strategy_query.start_time
+        end_time = strategy_query.end_time
+        if start_time and not end_time:
+            if now_datetime > start_time:
+                check_time = True
+            else:
+                return False
+        if end_time and not start_time:
+            if now_datetime < end_time:
+                check_time = True
+            else:
+                return False
+        if end_time and start_time:
+            if start_time < now_datetime < end_time:
+                check_time = True
+            else:
+                return False
+        if not start_time and not end_time:
+            check_time = True
         return check_time
 
 
@@ -1144,14 +1189,15 @@ class HostGroupModel(BaseModel):
 
     def get_group_resource_count(self, user_query):
         resource_count = 0
+        all_children_group = self.get_children_group_queryset()
         if user_query.role == 1:
             kwargs = {"resource_type": self.group_type}
-            kwargs["group__in"] = self.get_children_group_queryset()
+            kwargs["group__in"] = all_children_group
             resource_count = HostModel.fetch_all(**kwargs).count()
         else:
             resource_queryset = user_query.get_user_host_queryset_v3()
             for resource_query in resource_queryset:
-                if resource_query.group == self:
+                if resource_query.group in all_children_group:
                     if resource_query.resource_type == self.group_type:
                         resource_count += 1
         return resource_count
@@ -1159,10 +1205,10 @@ class HostGroupModel(BaseModel):
     def get_group_resource_count_v2(self, user_query, search_data=None):
         """search_data 主机名 IP 总数"""
         resource_count = 0
-
+        all_children_group = self.get_children_group_queryset()
         if user_query.role == 1:
             kwargs = {"resource_type": self.group_type}
-            kwargs["group__in"] = self.get_children_group_queryset()
+            kwargs["group__in"] = all_children_group
             if search_data:
                 resource_queryset = list(HostModel.fetch_all(host_name__contains=search_data, **kwargs)) + list(HostModel.fetch_all(host_address__contains=search_data, **kwargs))
             else:
@@ -1171,7 +1217,7 @@ class HostGroupModel(BaseModel):
         else:
             resource_queryset = user_query.get_user_host_queryset_v3()
             for resource_query in resource_queryset:
-                if resource_query.group == self:
+                if resource_query.group in all_children_group:
                     if resource_query.resource_type == self.group_type:
                         if search_data:
                             if search_data in resource_query.host_name:
@@ -1229,16 +1275,14 @@ class HostGroupModel(BaseModel):
 
     def get_access_host(self, user_query=None, search_data=None):
         if search_data:
-            host_queryset_host_name = HostModel.fetch_all(group=self, host_name__contains=search_data)
-            host_queryset_host_address = HostModel.fetch_all(group=self, host_address__contains=search_data)
-            host_queryset = list(host_queryset_host_name) + list(host_queryset_host_address)
+            host_queryset = list(HostModel.objects.filter(Q(host_name__contains=search_data) | Q(host_address__contains=search_data), group=self))
         else:
             host_queryset = self.host_group.get_queryset()
         if user_query:
             host_queryset = user_query.get_user_host_in_group(self, search_data)
         return list(set(host_queryset))
 
-    def to_all_dict(self, user_query=None, search_data=None, user=None):
+    def to_all_dict(self, user_query=None, search_data=None, user=None, host_queryset_v2=None):
         dt = {
             "id": self.id,
             "name": self.name,
@@ -1253,24 +1297,19 @@ class HostGroupModel(BaseModel):
         children = []
         host_queryset = self.get_access_host(user_query, search_data)
         if self.children_group.get_queryset():
-            children = [children.to_all_dict(user_query, search_data, user=user) for children in
+            children = [children.to_all_dict(user_query, search_data, user=user, host_queryset_v2=host_queryset_v2) for children in
                         self.children_group.get_queryset()]
             host_queryset.extend(self.get_access_host(user_query, search_data))
-        children.extend([host_query.to_console_dict() for host_query in list(set(host_queryset))])
-        dt["children"] = children
-        return dt
-
-    def to_all_v2_dict(self, user_query=None):
-        dt = {
-            "id": self.id,
-            "name": self.name,
-            "key": "group_" + str(self.id),
-            "type": "group",
-        }
-        children = []
-        children.extend(self.get_access_host(user_query))
-        if self.children_group.get_queryset():
-            children = [children.to_all_dict() for children in self.children_group.get_queryset()]
+        for host_query in list(set(host_queryset)):
+            dic = host_query.to_console_dict()
+            if host_queryset_v2:
+                if host_query in host_queryset_v2:
+                    dic["disabled"] = False
+                else:
+                    dic["disabled"] = True
+            else:
+                dic["disabled"] = False
+            children.append(dic)
         dt["children"] = children
 
         return dt
@@ -1309,9 +1348,12 @@ class NetworkProxyModel(BaseModel):
             "linux_login_password": self.linux_login_password,
             "windows_ip": self.windows_ip,
             "windows_port": self.windows_port,
-            "user": self.user.to_base_dict(),
             "description": self.description,
         }
+        if self.user:
+            dic["user"] = self.user.to_base_dict()
+        else:
+            dic["user"] = {}
         if HostModel.fetch_all(network_proxy=self):
             dic["resource"] = True
         else:

@@ -21,6 +21,7 @@ urlpatterns = [
     path("collection/", base_views.CollectionNavView.as_view()),                            # 获取搜藏信息
     path("get-user-message/", base_views.GetUserMessageView.as_view()),                     # 获取用户站内信
     path("read-all-message/", base_views.ReadAllMessageView.as_view()),                     # 全部已读
+    path("copyright-config/", base_views.CopyrightConfigView.as_view()),                    # 底部版权信息
     path("home-page/", base_views.HomePageView.as_view()),                                  # 概览页
     path("get-agent/", base_views.GetAgentView.as_view()),                                  # 资源平台导入
     path("user-admin/", base_views.UserAdminView.as_view()),                                # 用户管理

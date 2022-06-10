@@ -15,6 +15,7 @@ import VCharts from 'v-charts'
 import countTo from 'vue-count-to'
 import searchBox from './components/searchBox'
 import bootstrap from './core/bootstrap'
+import AuthModal from '@/views/components/AuthModal'
 import './core/lazy_use'
 import './utils/filter' // global filter
 import './global.less'
@@ -30,13 +31,14 @@ Vue.component('page-header-wrapper', PageHeaderWrapper)
 Vue.component('content-header', ContentHeader)
 Vue.component('count-to', countTo)
 Vue.component('search-box', searchBox)
+Vue.component('AuthModal', AuthModal)
 
 window.umi_plugin_ant_themeVar = themePluginConfig.theme
 
 new Vue({
-    router,
-    store,
-    i18n,
-    created: bootstrap,
-    render: h => h(App)
+	router,
+	store,
+	i18n,
+	created: bootstrap,
+	render: h => h(App)
 }).$mount('#app')

@@ -46,13 +46,25 @@ class HostGroup:
         search_type, search_data, _ = kwargs.pop("search_type", None), kwargs.pop("search_data", None), kwargs.pop(
             "total", None)
         if search_type and search_data:
-            kwargs[search_type + "__contains"] = search_data
+            kwargs[search_type + "__icontains"] = search_data
         credential_group_queryset = HostGroupModel.fetch_all(**kwargs).order_by("create_time")
         end_data = []
         if credential_group_queryset:
             for i in credential_group_queryset:
                 end_data.append(i.to_parent_dict(user_query))
+        if user_query.role not in [1]:
+            end_data = self.clean_parent_dict(end_data)
         return JsonResponse(success(SuccessStatusCode.MESSAGE_GET_SUCCESS, end_data))
+
+    def clean_parent_dict(self, li: list):
+        # 删除分组下没有主机的数据
+        for i in range(len(li)-1, -1, -1):
+            dic = li[i]
+            if dic.get("count") == 0:
+                li.pop(i)
+            else:
+                self.clean_parent_dict(dic.get("children", []))
+        return li
 
     def get_host_group_console(self, request):
         kwargs = request.GET.dict()
@@ -93,7 +105,10 @@ class HostGroup:
     def _get_host_group_console(self, user_query, search_data=None, group_type="host"):
         all_host_group_queryset = HostGroupModel.fetch_all(parent=None, group_type=group_type).order_by("create_time")
         if user_query.role != 1:
-            host_list = [host_group.to_all_dict(user_query, search_data, user=user_query) for host_group in all_host_group_queryset]
+            # 获取到当前用户通过授权的主机，传入to_all_dict用以标识是否不可点击（控制台会出现有主机但是时间限制无法登录情况）
+            host_queryset_v2 = user_query.get_user_host_queryset_v2()
+            host_list = [host_group.to_all_dict(user_query, search_data, user=user_query, host_queryset_v2=host_queryset_v2) for host_group in all_host_group_queryset]
+            host_list = self.clean_parent_dict(host_list)
         else:
             host_list = [host_group.to_all_dict(search_data=search_data, user=user_query) for host_group in all_host_group_queryset]
         return True, host_list

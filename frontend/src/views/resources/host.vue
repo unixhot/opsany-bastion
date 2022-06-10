@@ -87,9 +87,15 @@
                                     导入主机 <a-icon type="down" />
                                 </a-button>
                             </a-dropdown> -->
+                            <!-- @click="$refs.AddHost.show(selectGroupId)" -->
+
                             <a-button
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_create"
-                                @click="$refs.AddHost.show(selectGroupId)"
+                                @click="
+                                    $refs.AuthModal.handleAuth('create-host-resources').then(() =>
+                                        $refs.AddHost.show(selectGroupId)
+                                    )
+                                "
                                 type="primary"
                                 icon="plus"
                                 >新建</a-button
@@ -109,7 +115,11 @@
                             <a
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
                                 :title="text"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                @click="
+                                    $refs.AuthModal.handleAuth('get-host-resources').then(() =>
+                                        $router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })
+                                    )
+                                "
                                 >{{ text }}</a
                             >
                             <span v-else>{{ text }}</span>
@@ -123,7 +133,11 @@
                         <template slot="voucher" slot-scope="text, record">
                             <a
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                @click="
+                                    $refs.AuthModal.handleAuth('get-host-resources').then(() =>
+                                        $router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })
+                                    )
+                                "
                                 >{{ text }}</a
                             >
                             <span v-else>{{ text }}</span>
@@ -133,28 +147,42 @@
                                 size="small"
                                 type="link"
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_details"
-                                @click="$router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })"
+                                @click="
+                                    $refs.AuthModal.handleAuth('get-host-resources').then(() =>
+                                        $router.push({ path: '/resources/host/hostDetails', query: { id: record.id } })
+                                    )
+                                "
                                 >查看</a-button
                             >
                             <a-button
                                 size="small"
                                 type="link"
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_login"
-                                @click="handleLogin(record)"
+                                @click="
+                                    $refs.AuthModal.handleAuth('login-host-resources').then(() =>
+                                        $refs.LoginHostModal.showModal(record)
+                                    )
+                                "
                                 >登录</a-button
                             >
                             <a-button
                                 size="small"
                                 type="link"
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_update"
-                                @click="$refs.AddHost.show(selectGroupId, record)"
+                                @click="
+                                    $refs.AuthModal.handleAuth('modify-host-resources').then(() =>
+                                        $refs.AddHost.show(selectGroupId, record)
+                                    )
+                                "
                                 >编辑</a-button
                             >
                             <a-button
                                 size="small"
                                 type="link"
                                 v-if="$store.state.btnAuth.btnAuth.bastion_host_delete"
-                                @click="deleteHost(record)"
+                                @click="
+                                    $refs.AuthModal.handleAuth('delete-host-resources').then(() => deleteHost(record))
+                                "
                                 style="color: #333"
                                 >删除</a-button
                             >
@@ -164,7 +192,7 @@
                         v-if="tableData.length > 0"
                         :disabled="selectedRowKeys.length == 0"
                         icon="delete"
-                        @click="batchDelete"
+                        @click="$refs.AuthModal.handleAuth('delete-host-resources').then(() => batchDelete())"
                         style="float: left; margin: -50px 10px 0 0"
                         >批量删除</a-button
                     >
@@ -179,6 +207,7 @@
             :fatherData.sync="fatherData"
             ref="AddFromCmdb"
         ></AddFromCmdb>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 
@@ -267,11 +296,11 @@ export default {
         }
     },
     async mounted() {
-        const hasAuth = await getPageAuth(this, 'visit-host-resources')
-        if (hasAuth) {
-            this.getHostData()
-            this.getHostGroupData()
-        }
+        // const hasAuth = await getPageAuth(this, 'visit-host-resources')
+        // if (hasAuth) {
+        this.getHostData()
+        this.getHostGroupData()
+        // }
     },
     methods: {
         // 删除
@@ -375,30 +404,32 @@ export default {
         // 获取分组数据(树)
         getHostGroupData() {
             this.showTree = false
-            getHostGroup().then((res) => {
-                if (res.code == 200 && res.data) {
-                    organizeTree(res.data, 2)
-                    this.treeData[0].children = res.data
-                    this.fatherData = res.data
-                }
+            getHostGroup()
+                .then((res) => {
+                    if (res.code == 200 && res.data) {
+                        organizeTree(res.data, 2)
+                        this.treeData[0].children = res.data
+                        this.fatherData = res.data
+                    }
 
-                function organizeTree(treedata, layer) {
-                    treedata.map((item) => {
-                        item.key = item.id
-                        item.title = item.name
-                        item.scopedSlots = { title: 'action' }
-                        item.layer = layer
+                    function organizeTree(treedata, layer) {
+                        treedata.map((item) => {
+                            item.key = item.id
+                            item.title = item.name
+                            item.scopedSlots = { title: 'action' }
+                            item.layer = layer
 
-                        item.value = item.id
+                            item.value = item.id
 
-                        if (item.children && item.children.length > 0) {
-                            organizeTree(item.children, layer + 1)
-                        }
-                    })
-                }
-            }).finally(()=>{
-				this.showTree = true
-			})
+                            if (item.children && item.children.length > 0) {
+                                organizeTree(item.children, layer + 1)
+                            }
+                        })
+                    }
+                })
+                .finally(() => {
+                    this.showTree = true
+                })
         },
         // 删除分组
         deleteGroup(row) {
@@ -421,10 +452,6 @@ export default {
                     })
                 },
             })
-        },
-        //登录弹窗
-        handleLogin(row) {
-            this.$refs.LoginHostModal.showModal(row)
         },
     },
     components: {

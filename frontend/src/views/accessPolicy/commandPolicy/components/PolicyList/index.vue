@@ -19,7 +19,13 @@
             </div>
             <div>
                 <a-button @click="refresh" style="margin-right: 10px" icon="reload">刷新</a-button>
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_create" icon="plus" type="primary" @click="add">新建</a-button>
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_create"
+                    icon="plus"
+                    type="primary"
+                    @click="$refs.AuthModal.handleAuth('create-command-credential').then(() => add())"
+                    >新建</a-button
+                >
             </div>
         </div>
         <search-box :visible="visible" class="search_box">
@@ -48,10 +54,21 @@
             :rowKey="(item) => item.id"
         >
             <template slot="name" slot-scope="text, row">
-                <a :title="text" type="link" @click="viewDetail(row)">{{ text }}</a>
+                <a
+                    :title="text"
+                    type="link"
+                    @click="$refs.AuthModal.handleAuth('get-command-credential').then(() => viewDetail(row))"
+                    >{{ text }}</a
+                >
             </template>
             <template slot="status" slot-scope="text, row">
-                <a-switch v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_on_off" v-model="row.status" @click="changeStatus(row)"></a-switch> {{ text ? '开启' : '关闭' }}
+                <a-switch
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_on_off"
+                    :checked="row.status"
+                    :loading="row.stateLoading"
+                    @click="$refs.AuthModal.handleAuth('modify-command-credential').then(() => changeStatus(row))"
+                ></a-switch>
+                {{ text ? '开启' : '关闭' }}
             </template>
             <template slot="command" slot-scope="text, row">
                 {{ text.command.length }}/{{ text.command_group.length }}
@@ -65,12 +82,30 @@
                 }}
             </template>
             <template slot="action" slot-scope="text, row">
-                <a-button type="link" size="small" @click="viewDetail(row)">查看</a-button>
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_update" type="link" size="small" @click="edit(row)">编辑</a-button>
-                <a-button v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_delete" type="link" size="small" @click="del(row)">删除</a-button>
+                <a-button
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('get-command-credential').then(() => viewDetail(row))"
+                    >查看</a-button
+                >
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_update"
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('modify-command-credential').then(() => edit(row))"
+                    >编辑</a-button
+                >
+                <a-button
+                    v-if="$store.state.btnAuth.btnAuth.bastion_command_strategy_delete"
+                    type="link"
+                    size="small"
+                    @click="$refs.AuthModal.handleAuth('delete-command-credential').then(() => del(row))"
+                    >删除</a-button
+                >
             </template>
         </a-table>
         <ControlPolicy ref="ControlPolicy" @done="getTableData"></ControlPolicy>
+        <AuthModal ref="AuthModal"></AuthModal>
     </div>
 </template>
 <script>
@@ -157,12 +192,18 @@ export default {
         changeStatus(row) {
             const params = {
                 id: row.id,
-                status: row.status,
+                status: !row.status,
                 type: 'command',
             }
-            editAccessStrategyStatus(params).then((res) => {
-                this.getTableData()
-            })
+            row.stateLoading = true
+
+            editAccessStrategyStatus(params)
+                .then((res) => {
+                    this.getTableData()
+                })
+                .finally(() => {
+                    row.stateLoading = false
+                })
         },
         getTableData() {
             this.tableLoading = true
@@ -174,6 +215,9 @@ export default {
                     this.tableData = data
                     this.tableQuery.current = current
                     this.tableQuery.total = total
+                    this.tableData.forEach((item) => {
+                        this.$set(item, 'stateLoading', false)
+                    })
                     if (this.tableQuery.total > 0 && this.tableQuery.current > 1 && this.tableData.length == 0) {
                         this.tableQuery.current--
                         this.getTableData()
