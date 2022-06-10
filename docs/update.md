@@ -1,63 +1,52 @@
 # 生产环境更新部署
 
-## 腾讯蓝鲸开发中心上传部署
+更新OpsAny堡垒机需要以下3个步骤。
+
+- 更新最新代码
+- 构建SAAS安装包
+- 构建Websocket镜像
+
+## 直接使用官方提供的包部署
+
+
+
+
+## 自己手工构建部署
 
 需要先将堡垒机打包为蓝鲸Smart应用的包，然后就可以直接在开发者中心上传部署。
 
-1. Smart打包
+### 构建并部署SAAS包
+
+1. 更新之前克隆的代码并打包。
 
 ```
-cd /opt && git clone https://github.com/unixhot/opsany-bastion.git
+cd /opt/opsany-bastion && git pull
 wget -c http://bkopen-1252002024.file.myqcloud.com/common/py36_e.tgz -O /opt/py.tgz
 wget -c https://raw.githubusercontent.com/shpdnkti/saas-builder/main/build.sh -O /tmp/build.sh
 tar xf /opt/py.tgz -C /opt
 chmod +x /tmp/build.sh
-APP_VERSION=1.2.2
+APP_VERSION=1.2.3
 cd /opt/opsany-bastion && bash /tmp/build.sh -s ./ -d /tmp/release --python3-home /opt/py36_e/bin/python3 --app-code opsany-bastion --app-version $APP_VERSION
 ```
-将打包后的文件下载到本地。
 
+打包后的文件在/tmp/release目录下，将打包后的文件下载到本地。
+
+```
+ls /tmp/release/
+opsany-bastion_V1.2.3.tar.gz
+```
 
 2. 在开发中心上传并部署OpsAny Bastion
 
-打开蓝鲸【开发者中心】->【S-mart应用】->【上传部署新应用】->【上传文件】进行部署。
+打开蓝鲸【开发者中心】->【S-mart应用】，找到部署的opsany-bastion，点击操作中的【部署】。
 
-3. 部署完毕之后，点击opsany-bastion应用名称，进入到应用详情，点击环境变量，请根据实际情况修改下面的值。
+![更新截图](./static/bastion-update.png)
 
-```
-#自定义修改后执行
-MYSQL_PASSWORD=上面获取到的MySQL密码
-MYSQL_HOST=mysql-default.service.consul
-MYSQL_PORT=3306
-REDIS_HOST=redis.service.consul
-REDIS_PORT=6379
-REDIS_PASSWORD=上面获取到的Redis密码
-```
+上传完毕之后，点击【发布部署】，选择【生产环境】可以进行部署更新。
 
-添加完毕之后，点击【发布部署】-【正式环境】进行部署操作，会自动重启堡垒机服务，使设置的环境变量。
+![部署截图](./static/bastion-deploy.png)
 
-4. 初始化IAM
 
-- 设置环境变量
-
-```
-#自定义修改后执行
-export BK_IAM_V3_INNER_HOST=http://bkiam.service.consul:5001   #请修改为正确配置，这个是默认值。
-export APP_ID=opsany-bastion #请不要修改此配置，APP_ID是固定的，不允许修改。
-export APP_TOKEN=b7d83351-0f0a-4918-adaa-a4860bc2fced #请修改为正确的配置,可以在开发中心，S-Mart应用，查看opsany-bastion详情可以获取到。
-export BK_PAAS_HOST=https://ce.bktencent.com #请修改为正确的配置，你当前部署的蓝鲸的访问地址。
-```
-
-- 执行脚本进行初始化
-```
-cd /opt/opsany-bastion/install/init_iam
-python3 init_iam_system.py
-python3 init_action.py
-```
-
-> 如何可以正常打开所有的堡垒机页面，就证明部署正常，接下来需要部署底层的Websocket服务，用于Web SSH。
-
----
 
 ### 部署堡垒机Websocket容器
 
@@ -69,7 +58,7 @@ python3 init_action.py
 
 ```
 #克隆项目代码
-cd /opt && git clone https://github.com/unixhot/opsany-bastion.git
+cd /opt/opsany-bastion && git pull
 #从配置模板生成配置文件
 cd /opt/opsany-bastion/install && cp install.config.example install.config
 #设置为蓝鲸社区版的访问域名
@@ -77,47 +66,7 @@ DOMAIN_NAME=demo.opsany.com
 #设置本机的内网IP地址
 LOCAL_IP=192.168.56.11
 
-# 获取上面部署的堡垒机的APP_TOKEN，有时也叫做SECRET_KEY。因为要保证Websocket和Bastion的该值一致，才能通过验证。由于蓝鲸社区版上传部署后是自动生成SECRET_KEY，可以打开【开发中心】-【S-Mart应用】-【OpsAny-bastion】，点击对应的应用名称，即可打开详情页面。
 
-[root@VM-1-52-centos ~]# BASTION_APP_TOKEN=
-
-#批量修改访问域名和IP地址
-[root@VM-1-52-centos ~]# sed -i "s/demo.opsany.com/${DOMAIN_NAME}/g" install.config
-[root@VM-1-52-centos ~]# sed -i "s/192.168.56.11/${LOCAL_IP}/g" install.config
-
-#准备配置文件
-source install.config
-mkdir -p ${INSTALL_PATH}/{conf,uploads}
-mkdir -p ${INSTALL_PATH}/uploads/guacamole
-/bin/cp conf/settings_production.py.websocket ${INSTALL_PATH}/conf/
-/bin/cp conf/settings_production.py.websocket.init ${INSTALL_PATH}/conf/
-
-# Websocket
-sed -i "s/WEBSOCKET_GUACD_HOST/${WEBSOCKET_GUACD_HOST}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/REDIS_SERVER_HOST/${REDIS_HOST}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/REDIS_SERVER_PASSWORD/${REDIS_PASSWORD}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/REDIS_SERVER_PORT/${REDIS_PORT}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/MYSQL_SERVER_HOST/${MYSQL_HOST}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/MYSQL_SERVER_PORT/${MYSQL_PORT}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/MYSQL_BASTION_PASSWORD/${MYSQL_BASTION_PASSWORD}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket
-sed -i "s/demo.opsany.com/${PAAS_DOMAIN_NAME}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket.init
-sed -i "s/73a828d2-0cc1-11ec-bea7-00163e105ceb/${BASTION_APP_TOKEN}/g" ${INSTALL_PATH}/conf/settings_production.py.websocket.init
-
-# 手工检查和修改配置，需要修改APP
-
-vim ${INSTALL_PATH}/conf/settings_production.py.websocket.init
-vim ${INSTALL_PATH}/conf/settings_production.py.websocket
-```
-
-2. 安装Docker，并启动Websocket容器
-
-- 安装Docker
-
-```
-curl -o /etc/yum.repos.d/docker-ce.repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-yum install -y git wget docker-ce python3 python3-pip
-systemctl enable --now docker
-```
 
 - 启动Websocket容器
 ```
