@@ -8,8 +8,8 @@
 
 ## 直接使用官方提供的包部署
 
-
-
+- https://opsany-saas.oss-cn-beijing.aliyuncs.com/opsany-bastion_V1.2.3.tar.gz
+- registry.cn-beijing.aliyuncs.com/opsany/opsany-bk-websocket:v1.2.3
 
 ## 自己手工构建部署
 
@@ -22,7 +22,7 @@
 ```
 cd /opt/opsany-bastion && git pull
 wget -c http://bkopen-1252002024.file.myqcloud.com/common/py36_e.tgz -O /opt/py.tgz
-wget -c https://raw.githubusercontent.com/shpdnkti/saas-builder/main/build.sh -O /tmp/build.sh
+/bin/cp install/build.sh /tmp/build.sh
 tar xf /opt/py.tgz -C /opt
 chmod +x /tmp/build.sh
 APP_VERSION=1.2.3
