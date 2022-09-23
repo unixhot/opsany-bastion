@@ -7,7 +7,7 @@ import requests
 import json
 
 import settings
-from config import APP_CODE, SECRET_KEY, BK_URL
+from config import APP_CODE, SECRET_KEY, BK_COMPONENT_API_URL
 from bastion.utils.constants import IP_PATTERN, PRIVATE_IP_PATTERN
 
 
@@ -16,7 +16,7 @@ class EsbApi(object):
         self.token = token if token else None
         self.app_code = APP_CODE
         self.app_secret = SECRET_KEY
-        self.url = BK_URL
+        self.url = BK_COMPONENT_API_URL
         self.access_token = access_token
         self.headers = {
             "Cookie": "bk_token={}".format(self.token)

@@ -4,7 +4,7 @@ import json
 from django.db import transaction
 from bastion.models import UserInfo, UserGroupModel, UserGroupRelationshipModel
 from bastion.utils.esb_api import EsbApi
-from config import APP_CODE, BK_URL, SECRET_KEY
+from config import APP_CODE, BK_COMPONENT_API_URL, SECRET_KEY
 
 
 def user_sync(func):
@@ -52,7 +52,7 @@ def user_group_sync(func):
 
 
 def get_all_users(request):
-    host = BK_URL
+    host = BK_COMPONENT_API_URL
     bk_token = request.COOKIES.get('bk_token')
     # self.bk_token = "9lDBNOxzXjqJ5BH3QpfxcA2HG7eAjfDkmVivxaHtWpA"
     headers = {"Accept": "application/json"}

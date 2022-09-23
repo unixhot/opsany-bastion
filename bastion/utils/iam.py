@@ -1,14 +1,14 @@
 try:
     from iam import IAM, Request, Subject, Action, Resource
 
-    from config import APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_URL
+    from config import APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_COMPONENT_API_URL
 except:
     pass
 
 
 class Permission(object):
     def __init__(self):
-        self._iam = IAM(APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_URL)
+        self._iam = IAM(APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_COMPONENT_API_URL)
 
     def _make_request_without_resources(self, username, action_id):
         request = Request(
@@ -40,6 +40,6 @@ if __name__ == '__main__':
     django.setup()
     from iam import IAM, Request, Subject, Action, Resource
 
-    from config import APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_URL
+    from config import APP_CODE, SECRET_KEY, BK_IAM_HOST, BK_COMPONENT_API_URL
     res = Permission().allowed_visit_host_resources("admin")
     print(res)

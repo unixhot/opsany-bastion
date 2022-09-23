@@ -5,6 +5,7 @@
 
 # blueapps requirement
 Django==2.2.6
+blueapps==4.4.2
 mysqlclient==1.4.4
 MarkupSafe==1.1
 Mako==1.0.6

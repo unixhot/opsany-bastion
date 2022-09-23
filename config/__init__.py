@@ -10,15 +10,29 @@ import os
 from blueapps.core.celery import celery_app
 
 # app 基本信息
+def get_env_or_raise(key):
+    """Get an environment variable, if it does not exist, raise an exception"""
+    value = os.environ.get(key)
+    if not value:
+        raise RuntimeError(
+            (
+                'Environment variable "{}" not found, you must set this variable to run this application.'
+            ).format(key)
+        )
+    return value
 
 # SaaS运行版本，如非必要请勿修改
 RUN_VER = 'open'
 # SaaS应用ID
-APP_CODE = os.getenv("APP_ID", "opsany-bastion")
+APP_CODE = os.getenv("BKPAAS_APP_ID", "opsany-bastion")
 # SaaS安全密钥，注意请勿泄露该密钥
-SECRET_KEY = os.getenv("APP_TOKEN")
+SECRET_KEY = os.getenv("BKPAAS_APP_SECRET")
 # PAAS平台URL
-BK_URL = os.getenv("BK_PAAS_HOST")
+# 注意： 不能用这个变量来作为 ESB API 的 URL 前缀
+BK_URL = os.getenv("BKPAAS_URL")
+# ESB API 访问 URL
+BK_COMPONENT_API_URL = os.getenv("BK_COMPONENT_API_URL")
+
 # UploadPath
 UPLOAD_PATH = os.getenv("BK_APP_UPLOAD_PATH", "/opt/opsany/")
 # IAM URL
