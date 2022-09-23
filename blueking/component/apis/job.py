@@ -13,10 +13,20 @@ class CollectionsJOB(object):
             path='/api/c/compapi{bk_api_ver}/job/execute_job/',
             description=u'启动作业'
         )
+        self.fast_execute_script = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/job/fast_execute_script/',
+            description=u'快速执行脚本'
+        )
         self.fast_execute_sql = ComponentAPI(
             client=self.client, method='POST',
             path='/api/c/compapi{bk_api_ver}/job/fast_execute_sql/',
             description=u'快速执行SQL脚本'
+        )
+        self.fast_push_file = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/job/fast_push_file/',
+            description=u'快速分发文件'
         )
         self.get_cron_list = ComponentAPI(
             client=self.client, method='GET',
@@ -53,6 +63,11 @@ class CollectionsJOB(object):
             path='/api/c/compapi{bk_api_ver}/job/get_own_db_account_list/',
             description=u'查询用户有权限的DB帐号列表'
         )
+        self.get_public_script_list = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/job/get_public_script_list/',
+            description=u'查询公共脚本列表'
+        )
         self.get_script_detail = ComponentAPI(
             client=self.client, method='GET',
             path='/api/c/compapi{bk_api_ver}/job/get_script_detail/',
@@ -67,26 +82,6 @@ class CollectionsJOB(object):
             client=self.client, method='POST',
             path='/api/c/compapi{bk_api_ver}/job/get_step_instance_status/',
             description=u'查询作业步骤的执行状态'
-        )
-        self.update_cron_status = ComponentAPI(
-            client=self.client, method='POST',
-            path='/api/c/compapi{bk_api_ver}/job/update_cron_status/',
-            description=u'更新定时作业状态'
-        )
-        self.fast_execute_script = ComponentAPI(
-            client=self.client, method='POST',
-            path='/api/c/compapi{bk_api_ver}/job/fast_execute_script/',
-            description=u'快速执行脚本'
-        )
-        self.fast_push_file = ComponentAPI(
-            client=self.client, method='POST',
-            path='/api/c/compapi{bk_api_ver}/job/fast_push_file/',
-            description=u'快速分发文件'
-        )
-        self.save_cron = ComponentAPI(
-            client=self.client, method='POST',
-            path='/api/c/compapi{bk_api_ver}/job/save_cron/',
-            description=u'新建或保存定时作业'
         )
         self.change_cron_status = ComponentAPI(
             client=self.client, method='POST',
@@ -132,4 +127,14 @@ class CollectionsJOB(object):
             client=self.client, method='GET',
             path='/api/c/compapi{bk_api_ver}/job/get_task_result/',
             description=u'根据作业实例 ID 查询作业执行状态'
+        )
+        self.save_cron = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/job/save_cron/',
+            description=u'新建或保存定时作业'
+        )
+        self.update_cron_status = ComponentAPI(
+            client=self.client, method='POST',
+            path='/api/c/compapi{bk_api_ver}/job/update_cron_status/',
+            description=u'更新定时作业状态'
         )
